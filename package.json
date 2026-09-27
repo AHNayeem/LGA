@@ -6,7 +6,15 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration",
+    "test:e2e": "playwright test",
+    "db:indexes": "node --import ./scripts/register.mjs scripts/ensure-indexes.mjs",
+    "seed": "node --import ./scripts/register.mjs scripts/seed.mjs",
+    "create-admin": "node --import ./scripts/register.mjs scripts/create-admin.mjs"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
@@ -18,9 +26,12 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4",
     "eslint": "^9",
     "eslint-config-next": "16.3.6",
-    "tailwindcss": "^4"
+    "mongodb-memory-server": "^11.3.0",
+    "tailwindcss": "^4",
+    "vitest": "^5.0.2"
   }
 }

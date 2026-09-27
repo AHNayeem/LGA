@@ -1,6 +1,6 @@
 # Phase 0 — Audit & Proposed Architecture
 
-Status: **Awaiting approval** (2026-09-27). No application code has been changed yet.
+Status: **Approved** (2026-09-27), with changes. The approved decisions (Vercel, GridFS/static media, `draft → reviewed → approved` lifecycle, repository layer, EN + BN) are documented in `ARCHITECTURE.md`, which supersedes this file where they differ. Reference PDFs were found in `docs/`; see `REFERENCE-ANALYSIS.md`, including the revised curriculum mapping.
 
 ---
 

@@ -4,7 +4,7 @@ Analysed 2026-09-27. This file records **structural information** taken from the
 
 **Copyright rule.** None of the reference content (texts, exercises, dialogues, audio, images, answer keys, word-list translations) is copied into the application. Only structure is recorded here: section names, task formats, timings, scoring rules, and chapter and topic titles used for mapping. All learner-facing content is original.
 
-The PDFs themselves are gitignored (`docs/*.pdf`) and must not be committed.
+The PDFs are copyrighted and should not be in version control. `docs/*.pdf` is gitignored for new files, but the existing PDFs were committed in `e065d05` and are still tracked (see the open item in the Phase 1 report).
 
 | File | Type | Usable as |
 |---|---|---|

@@ -39,3 +39,15 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# allow the env template
+!.env.example
+
+# copyrighted reference PDFs (local reference only, never commit)
+/docs/*.pdf
+
+# playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
