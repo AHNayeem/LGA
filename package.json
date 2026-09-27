@@ -14,6 +14,7 @@
     "test:e2e": "playwright test",
     "db:indexes": "node --import ./scripts/register.mjs scripts/ensure-indexes.mjs",
     "seed": "node --import ./scripts/register.mjs scripts/seed.mjs",
+    "audio:generate": "node --import ./scripts/register.mjs scripts/generate-audio.mjs",
     "create-admin": "node --import ./scripts/register.mjs scripts/create-admin.mjs"
   },
   "dependencies": {

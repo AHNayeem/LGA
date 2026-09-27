@@ -17,6 +17,19 @@ export async function transitionReviewAction(_prev, formData) {
   return result;
 }
 
+export async function bulkModuleTransitionAction(_prev, formData) {
+  const { moduleId, step } = formToObject(formData, ["moduleId", "step"]);
+  const result = await runAction("content.bulk", async () => {
+    const actor = await requireUser();
+    return contentService.bulkModuleTransition(actor, moduleId, step);
+  });
+  if (result.ok) {
+    revalidatePath("/admin", "layout");
+    revalidatePath("/dashboard");
+  }
+  return result;
+}
+
 export async function setPublishStatusAction(_prev, formData) {
   const { kind, id, to } = formToObject(formData, ["kind", "id", "to"]);
   const result = await runAction("content.publish", async () => {

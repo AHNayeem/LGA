@@ -61,9 +61,19 @@ describe("content schemas", () => {
 
   it("lesson blocks are typed and bounded", () => {
     const base = { moduleId: "64b7f0c2a1b2c3d4e5f60718", slug: "l1", order: 1, title: { de: "Hallo" }, sourceType: "original" };
-    expect(lessonSchema.safeParse({ ...base, blocks: [{ type: "listening" }] }).success).toBe(true);
-    expect(lessonSchema.safeParse({ ...base, blocks: [{ type: "karaoke" }] }).success).toBe(false);
-    expect(lessonSchema.safeParse({ ...base, blocks: Array(31).fill({ type: "intro" }) }).success).toBe(false);
+    const id = "64b7f0c2a1b2c3d4e5f60719";
+    const ok = (blocks) => lessonSchema.safeParse({ ...base, blocks }).success;
+    expect(ok([{ type: "listening", key: "hoeren", refId: id }])).toBe(true);
+    expect(ok([{ type: "vocabulary", key: "woerter", vocabIds: [id] }])).toBe(true);
+    expect(ok([{ type: "intro", key: "start", body: { en: "Welcome" } }])).toBe(true);
+    // Each type has its own shape: exercise blocks need a reference, vocabulary needs words.
+    expect(ok([{ type: "listening", key: "hoeren" }])).toBe(false);
+    expect(ok([{ type: "vocabulary", key: "woerter", vocabIds: [] }])).toBe(false);
+    expect(ok([{ type: "karaoke", key: "k", refId: id }])).toBe(false);
+    // Keys identify progress, so they must be unique.
+    expect(ok([{ type: "grammar", key: "a", refId: id }, { type: "practice", key: "a", refId: id }])).toBe(false);
+    const intro = (i) => ({ type: "intro", key: `b${i}`, body: { en: "x" } });
+    expect(ok(Array.from({ length: 31 }, (_, i) => intro(i)))).toBe(false);
   });
 });
 

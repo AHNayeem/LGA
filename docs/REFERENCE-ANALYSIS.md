@@ -131,4 +131,6 @@ Compared with the Phase 0 module list, three things change:
 | 12 | Reisen & Wetter | Kap. 12 | 44 (denn), 10 | Schreiben T2, Hören T2 |
 | – | Review units after modules 3, 6, 9 and 12, then 2 mock exams and the A1 final assessment | Plattform 1–4 | | full exam |
 
-This table is a proposal. It becomes content in Phase 2, with Module 1 built first and every item starting as `reviewStatus: draft`.
+In Phase 2 this plan was checked against the chapter order and grammar lists (see `CURRICULUM-A1.md` §1). Module 1 is implemented and seeded as `reviewStatus: draft`; modules 2–12 follow the same pattern.
+
+The per-skill A1 mastery thresholds used by the app are learning targets, **not** Goethe pass criteria (none are documented in these PDFs).

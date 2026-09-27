@@ -1,28 +1,6 @@
 import { test, expect } from "@playwright/test";
+import { login, publishA1ViaAdmin, register, signOut } from "./helpers.js";
 
-const unique = () => `learner-${Date.now()}-${Math.floor(Math.random() * 1e6)}@e2e.test`;
-
-async function register(page, { name = "Lena Schäfer", email = unique(), password = "sicheres-passwort" } = {}) {
-  await page.goto("/register");
-  await page.getByLabel("Name").fill(name);
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill(password);
-  await page.getByRole("button", { name: "Create account" }).click();
-  await expect(page).toHaveURL(/\/dashboard$/);
-  return { name, email, password };
-}
-
-async function signOut(page) {
-  await page.getByRole("button", { name: "Sign out" }).click();
-  await expect(page).toHaveURL(/\/$/);
-}
-
-async function login(page, email, password) {
-  await page.goto("/login");
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill(password);
-  await page.getByRole("button", { name: "Sign in" }).click();
-}
 
 test("protected pages redirect to login and back", async ({ page }) => {
   await page.goto("/dashboard");
@@ -92,31 +70,13 @@ test("media requires authentication", async ({ request }) => {
 });
 
 test("admin approves and publishes A1, learner then sees it", async ({ page, browser }) => {
-  await login(page, "admin@e2e.test", "e2e-admin-password");
-  await expect(page).toHaveURL(/\/dashboard$/);
-  await page.getByRole("link", { name: "Admin" }).click();
-  await expect(page.getByRole("heading", { name: "Content administration" })).toBeVisible();
-
-  const row = page.getByRole("row", { name: /A1/ });
-  // Tolerate reruns against the same seeded server (other projects may have already published).
-  if (await row.getByRole("button", { name: "Mark reviewed", exact: true }).isVisible()) {
-    await row.getByRole("button", { name: "Mark reviewed", exact: true }).click();
-    await expect(row.getByText("reviewed", { exact: true })).toBeVisible();
-  }
-  if (await row.getByRole("button", { name: "Approve", exact: true }).isVisible()) {
-    await row.getByRole("button", { name: "Approve", exact: true }).click();
-    await expect(row.getByText("approved", { exact: true })).toBeVisible();
-  }
-  if (await row.getByRole("button", { name: "Publish", exact: true }).isVisible()) {
-    await row.getByRole("button", { name: "Publish", exact: true }).click();
-  }
-  await expect(row.getByText("published", { exact: true })).toBeVisible();
+  const row = await publishA1ViaAdmin(page);
   await expect(row.getByRole("button", { name: "Unpublish", exact: true })).toBeVisible();
 
   const learnerContext = await browser.newContext();
   const learner = await learnerContext.newPage();
   await register(learner);
-  await expect(learner.getByText("A1 – Anfänger")).toBeVisible();
+  await expect(learner.getByText("A1 – Anfänger").first()).toBeVisible();
   await expect(learner.getByText("No level has been approved and published yet.")).toHaveCount(0);
   await learnerContext.close();
 });

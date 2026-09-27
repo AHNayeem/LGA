@@ -1,0 +1,36 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { completeBlockAction } from "@/app/actions/learning";
+import Alert from "@/components/ui/Alert";
+
+// Marks a reading block (intro, grammar) as done, then moves on.
+export default function ContinueButton({ lessonId, blockKey, nextHref, label = "Continue" }) {
+  const router = useRouter();
+  const [error, setError] = useState(null);
+  const [pending, startTransition] = useTransition();
+
+  function onClick() {
+    setError(null);
+    startTransition(async () => {
+      const res = await completeBlockAction({ lessonId, blockKey });
+      if (!res.ok) return setError(res.message);
+      router.push(nextHref);
+    });
+  }
+
+  return (
+    <div className="space-y-3">
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={pending}
+        className="inline-flex h-11 items-center rounded-lg bg-brand-600 px-5 font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+      >
+        {pending ? "Saving…" : label}
+      </button>
+      {error && <Alert tone="error">{error}</Alert>}
+    </div>
+  );
+}

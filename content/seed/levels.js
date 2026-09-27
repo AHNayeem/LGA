@@ -1,6 +1,7 @@
 // CEFR level structure. Only structural metadata; lessons/modules are Phase 2 content.
 // Bangla titles are intentionally omitted until a reviewer supplies them (UI falls back to English).
-// Mastery thresholds are initial proposals, adjustable per level/module/lesson.
+// Mastery thresholds are the app's learning targets (NOT official Goethe pass criteria),
+// adjustable per level/module/lesson without code changes.
 export const LEVELS = [
   {
     code: "A1",
