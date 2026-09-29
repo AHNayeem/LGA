@@ -1,6 +1,6 @@
 # A1 Curriculum
 
-Status: Phase 2. Module 1 is implemented and seeded as draft. Modules 2–12 are planned.
+Status: Phase 3. Module 1 is implemented and seeded as draft, and speaking practice now supports recording. Real German audio is generated with the offline tooling once a Google TTS key is available (see "Audio status"). Modules 2–12 are planned.
 
 Sources: `REFERENCE-ANALYSIS.md` (structure taken from the reference PDFs) and the PDFs in `docs/`. The books and exam papers are used **only for mapping and task formats**. All learner-facing text, dialogues, questions, examples and explanations are original. Nothing is copied from Netzwerk neu, Grammatik aktiv, the glossaries or the Goethe papers.
 
@@ -46,11 +46,29 @@ The plan from `REFERENCE-ANALYSIS.md` §4 was checked against three references b
 | 5 | Das Alphabet | intro · 8 words · grammar *alphabet* · 3 exercises | spelled surnames (listening), e-mail addresses (listening), spelling aloud (speaking) |
 | 6 | Modultest | intro · 6 test blocks | listening, reading (e-mail), writing (form, Schreiben Teil 1 style), grammar, vocabulary (all at a 70% pass mark), speaking card (not scored) |
 
-In total: 84 vocabulary items, 4 grammar topics, 26 exercises (112 items), and 169 audio cues. Every assessable A1 skill has exercises (vocabulary, grammar, reading, listening, writing). Speaking is practised through self-rating only and is **not assessed** until Phase 3 adds recording.
+In total: 84 vocabulary items, 4 grammar topics, 26 exercises (112 items), and 169 audio cues. Every assessable A1 skill has exercises (vocabulary, grammar, reading, listening, writing).
+
+**Speaking** (3 exercises, 8 items): learners can record each answer, listen back, re-record, submit, and later play or delete their own recording. They then compare it with the model answer and rate themselves. Speaking is **practice only**:
+- not scored, and never counted for mastery ("not assessed")
+- no automated pronunciation assessment or feedback
+- no human grading yet
+
+If no microphone is available, the self-rating still works.
+
+### Audio status
+- All 169 cues are described in the content and are generated **offline**. The app never calls a TTS API.
+- Until `bun run audio:generate` has run with a real key, `bun run audio:verify` fails and the listening exercises can't be published (publishing is blocked when required audio is missing).
+- Steps:
+  1. `bun run audio:smoke`: check the voices and listen to the 20 samples.
+  2. `TTS_PROVIDER=google bun run audio:generate -- --voices-verified`
+  3. `bun run audio:verify`
+- Voices and settings: see `ARCHITECTURE.md` → Audio generation. The run's settings are also recorded in `content/audio/manifest.json`.
+- Generated audio is still TTS. The reviewer checklist below still applies: listen to spelled letters, phone numbers and umlauts.
 
 ### Content rules applied
 - `sourceType: "ai_generated"`: the text was drafted with AI assistance, so it must be reviewed by a person. Everything is seeded as `draft` / `unpublished`.
-- **Bangla:** no `bn` text exists. The UI falls back to English. A reviewer adds Bangla, which then goes through the same review.
+- **Bangla:** no `bn` educational text exists, and Phase 3 added none. The UI falls back to English. A reviewer adds Bangla, which then goes through the same review. The six Bangla **skill labels** in `lib/content/skills.js` (from Phase 1) are **unreviewed**. They are flagged in the code and still need a Bangla speaker to check them.
+- **Learner disclosure:** Module 1's lessons and module page show "AI-assisted content, not yet reviewed by a native speaker." Approving the content in `/admin` doesn't remove the notice: an in-app approval is not a native-speaker review.
 - **Names and domains:** fictional people, and `beispiel.de` / `beispiel.com` for e-mail addresses.
 - **Situation prompts:** in English so beginners understand the task. The answers are always German.
 - **Integrity test:** `tests/unit/curriculum-content.test.js` checks that every item validates, every slug and reference resolves, every answer key scores 100% with the right answers and fails with wrong ones, and that no Bangla or approval state is shipped.
@@ -61,6 +79,7 @@ In total: 84 vocabulary items, 4 grammar topics, 26 exercises (112 items), and 1
 3. Audio is generated (publishing is blocked otherwise). Listen for pronunciation, especially spelled letters and phone numbers.
 4. Nothing resembles textbook or exam material beyond the task format.
 5. If adding Bangla, have it checked by a Bangla speaker. It resets the item to draft.
+6. Items approved with `bun run content:fixture-publish` (dev/test databases only) are labelled "Test-fixture approval – not a genuine review". Before real learners see the module, they must be sent back to draft and genuinely reviewed and approved. `bun run content:check` lists them.
 
 ## 3. Mastery thresholds
 

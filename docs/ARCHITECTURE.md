@@ -1,6 +1,6 @@
 # Architecture
 
-Status: Phase 1 (foundation) and Phase 2 (learning engine + A1 Module 1) implemented, 2026-09-27. For earlier decisions see `PHASE-0-ARCHITECTURE.md`; where they differ, this file wins. Reference-material findings are in `REFERENCE-ANALYSIS.md`; the curriculum and Module 1 are described in `CURRICULUM-A1.md`.
+Status: Phase 1 (foundation), Phase 2 (learning engine + A1 Module 1) and Phase 3 (speaking recordings, audio production tooling, Atlas validation tooling) implemented, 2026-09-27. For earlier decisions see `PHASE-0-ARCHITECTURE.md`; where they differ, this file wins. Reference-material findings are in `REFERENCE-ANALYSIS.md`; the curriculum and Module 1 are described in `CURRICULUM-A1.md`.
 
 ## Stack
 Next.js 16 (App Router), React 19, JavaScript, Tailwind CSS v4, Bun, MongoDB Atlas (native driver), Zod, bcryptjs, server-only. Tests use Vitest with mongodb-memory-server, and Playwright.
@@ -38,7 +38,7 @@ Rules:
 - Sessions have a fixed lifetime (`SESSION_TTL_DAYS`, default 14). There is no sliding renewal yet.
 - Self-registration always creates a `USER`. Admins are created with `bun run create-admin`.
 - Login errors are generic, and unknown emails still run a dummy bcrypt compare, so timing does not reveal whether an account exists.
-- CSRF protection: Server Actions use Next's built-in Origin/Host check, and the cookie is SameSite=Lax. There are no cookie-authenticated mutating route handlers yet. Any added later must check `Origin`.
+- CSRF protection: Server Actions use Next's built-in Origin/Host check, and the cookie is SameSite=Lax. The one cookie-authenticated mutating route handler, `POST /api/recordings`, checks the request with `lib/security/origin.js`: `Origin` is required and must equal `APP_URL` or the addressed host, and `Sec-Fetch-Site` (when sent) must be `same-origin`. Any new mutating route handler must use the same check.
 
 ## Rate limiting (no Redis)
 `lib/security/rateLimit.js` implements fixed windows in the `rateLimits` collection: an atomic `$inc` upsert, a TTL index, and a retry on concurrent first inserts.
@@ -48,8 +48,8 @@ Rules:
 | Login by IP | 30 / 15 min |
 | Login by email (hashed) | 8 / 15 min, cleared on success |
 | Register by IP | 10 / hour |
-| Uploads by user | 60 / hour |
-| Learning writes by user (attempts, block completion, flashcard ratings) | 1200 / hour |
+| Uploads by user (`POST /api/recordings`) | 60 / hour, checked before the body is read |
+| Learning writes by user (attempts, block completion, flashcard ratings, recording deletion) | 1200 / hour |
 
 The client IP comes from `x-forwarded-for`, which Vercel sets itself. If the app is ever self-hosted behind a different proxy, that proxy must overwrite this header.
 
@@ -63,6 +63,7 @@ Every content document carries two independent axes plus provenance:
 | `sourceType` | `original \| ai_generated \| licensed \| reference_metadata \| system` |
 | `sourceReference` | Free text. Required for `licensed`. |
 | `reviewedBy/At`, `approvedBy/At`, `publishedAt` | Audit trail |
+| `approvalBasis` | `human_review` (every approval made in `/admin`) or `test_fixture` (see below). Cleared whenever the item goes back to draft |
 | `version` | Incremented on every content edit. Used for optimistic concurrency. |
 
 - Editing reviewed or approved content resets it to `draft` and unpublishes it, so changed German text is always re-checked.
@@ -80,6 +81,9 @@ Hierarchy: `levels (code) → modules (levelCode, slug) → lessons (moduleId, s
   - A lesson can only be published when every exercise, grammar topic and word it uses is published.
   - An exercise can only be published when its required audio has been generated, and only speaking practice may be ungraded.
   - Learner reads fail closed on top of this. If anything in the chain (level → module → lesson → content) is not approved and published, the lesson is unavailable rather than shown partly.
+- **Test-fixture approvals.** To validate a module end to end on a dev/test database before a person has reviewed it, `bun run content:fixture-publish` (and the E2E seeding) approve with `approvalBasis: "test_fixture"`. This is **not** a content review: `/admin` shows "Test-fixture approval – not a genuine review" next to each such item, `content:check` warns about them, provenance stays `ai_generated`, and the script refuses to run with `NODE_ENV=production` or on a database whose name doesn't mark it as dev/test (`lib/config/databaseGuard.js`). Content released to real learners needs genuine human approvals.
+- **Learner disclosure.** Lessons and modules with any `ai_generated` content show "AI-assisted content, not yet reviewed by a native speaker." (`components/learn/AiContentNotice.js`). An in-app approval doesn't remove the notice, because it isn't a native-speaker review.
+- **Pre-publish report:** `bun run content:check -- --module a1/hallo` lists missing required audio per lesson (including the module test), published items depending on unpublished ones, lifecycle inconsistencies, provenance changes, approval basis and unreviewed Bangla. It is read-only and exits 1 on errors.
 - **Bulk module review** (`bulkModuleTransition`, `/admin/modules/[id]`) applies one step (review / approve / publish) to every item of a module that is in the matching state. It runs through the same per-item functions, so no step can be skipped and dependencies are published first.
 
 **Localisation.** Text fields are `{ de?, en?, bn? }` objects, validated by `localizedText()` and NFC-normalised. Adding a locale means adding its code to `lib/i18n/locales.js`; no schema changes are needed. German is the learning language. English and Bangla are explanation languages, with fallback order requested locale → `en` → any.
@@ -93,9 +97,47 @@ Hierarchy: `levels (code) → modules (levelCode, slug) → lessons (moduleId, s
   - `gridfs`: MongoDB Atlas GridFS for learner recordings. It works on Vercel with no disk and no extra infrastructure. This is the default for `MEDIA_STORAGE_DRIVER`.
   - `memory`: tests only.
   - Object storage (S3/R2/Vercel Blob) can be added later as one more driver, with no content changes.
-- Uploads are validated by size (`MEDIA_MAX_UPLOAD_BYTES`), by file signature (magic bytes), and by checking the declared MIME type against the detected one (`lib/media/fileTypes.js`).
+- Uploads are validated by size (`MEDIA_MAX_UPLOAD_BYTES`), by file signature (magic bytes), and by checking the declared MIME type against the detected one (`lib/media/fileTypes.js`). Learner recordings accept only the containers `MediaRecorder` produces: WebM, MP4 and Ogg.
+- Clients only ever see `publicMediaView(asset)` = `{ id, kind, mime, size, durationSec, createdAt }`. Storage driver, key, GridFS ids and owner never leave the server.
 - Access: `curriculum` assets are readable by any signed-in user. `private` assets are readable by their owner and media managers. Missing and forbidden both return 404, so ids can't be probed.
 - Audio playback (`lib/media/audioSource.js`): production uses only pre-generated or recorded assets, with no TTS call per request. Development falls back to browser `speechSynthesis` (de-DE) when no asset exists yet, and the UI labels it as a development preview. The fallback sends the text to the browser, so it is never enabled in production.
+
+### Speaking recordings (Phase 3)
+
+```
+browser: record → stop/cancel → preview → record again → Save
+  → POST /api/recordings?lessonId&exerciseId&itemId&duration   (raw bytes, Content-Type = recorder type)
+      origin check → session → target check (live lesson, speak_prompt item) → rate limit
+      → read body with byte limit → signature check → storage.put → mediaAssets insert
+      ← 201 { recording: { id, mime, size, durationSec, createdAt } }        status "pending"
+  → submitExerciseAction({ answers: { q1: { selfRating, recordingId } } })
+      recording must belong to this learner AND this exercise item, or the whole submission fails
+      → attempt stored → recording "attached" (attemptId) → older recordings for the item deleted
+lesson page: latest attached recording per item → <audio src="/api/media/:id"> (owner only) + delete
+```
+
+| Piece | File |
+|---|---|
+| HTTP handler (framework-free, unit-testable): origin, auth, streaming size limit, error mapping | `lib/http/recordingUpload.js`, `lib/http/readBody.js`, route `app/api/recordings/route.js` |
+| Target validation, pending → attached, replacement, deletion, stale cleanup | `lib/services/recordingService.js` (reads: `recordingReads.js`) |
+| Bytes + metadata, cleanup when the metadata write fails, public view | `lib/services/mediaService.js` (`storeLearnerRecording`, `destroyMediaAsset`) |
+| Shared constants (recorder formats, statuses, stale age) | `lib/media/recording.js` |
+| Browser: recorder, upload client, speaking item | `components/audio/VoiceRecorder.js`, `lib/media/recordingClient.js`, `components/exercises/items/SpeakPromptItem.js` |
+
+- **Metadata** lives on the `mediaAssets` document (`source: "learner"`, `visibility: "private"`, `ownerId`) in a `recording` subdocument: `{ lessonId, exerciseId, itemId, status: pending|attached, attemptId, attachedAt, durationSec }`. Nothing is stored on the user document.
+- **Answer format.** A `speak_prompt` answer is either the Phase 2 string (`"confident"`), which still works, or `{ selfRating, recordingId? }`. Speaking stays `graded: false` with score 0. It never counts towards mastery, and there is **no automated pronunciation assessment or feedback** of any kind.
+- **Order of writes.** Bytes are stored first, then the metadata. If the metadata insert fails, the bytes are deleted again. Deletion removes the metadata first (access is revoked immediately), then the bytes.
+- **Replacement and cleanup.**
+  - A new upload for an item supersedes that item's unsubmitted uploads.
+  - A new submission deletes the item's previously attached recording. Attempts are immutable and keep the old id, which then plays as 404.
+  - Unsubmitted uploads older than 24 hours are removed on the learner's next upload, or globally by `bun run media:cleanup`.
+- **Isolation.** Every recording query is scoped by `ownerId`. Missing, foreign and forged ids all look the same (404 for playback and deletion, the same validation error for submission).
+- **Limits.**
+  - 60 s (`RECORDING_MAX_SECONDS`): enforced by the recorder (auto-stop), and the client-reported duration is rejected above the limit plus 2 s.
+  - 2 MB (`MEDIA_MAX_UPLOAD_BYTES`): the real server-side bound. Checked from `Content-Length` before reading, and by counting while streaming.
+  - The duration is not re-measured on the server (WebM from `MediaRecorder` has no reliable duration header), so the byte limit is the backstop.
+- **Degradation.** If the microphone is denied or missing, `MediaRecorder` is absent or no supported format exists, the item explains why and self-rating still works. Upload or network failures keep the take so the learner can retry, or discard it.
+- **Deployment limit and extension point.** The current upload goes through a serverless function, which caps request bodies (Vercel: 4.5 MB). 2 MB leaves headroom. Larger files would need a direct-to-storage upload (presigned URL, then a completion call that validates the stored bytes). That would replace `lib/media/recordingClient.js` and the route, but not the lesson UI or the learning service: those only ever handle a `recordingId`.
 
 ### Audio generation (offline)
 | Piece | File |
@@ -107,7 +149,33 @@ Hierarchy: `levels (code) → modules (levelCode, slug) → lessons (moduleId, s
 | Registration in `mediaAssets` (`ttsHash`, unique) and read-time lookup | `lib/services/audioService.js` |
 
 - **Lookup by hash:** assets are found by the cue hash (sha256 of language, voice, rate and text) at read time. Generating audio therefore never edits content (which would reset its review), and changing a text automatically orphans the old audio.
-- **Flow:** `bun run audio:generate` (a developer runs it once, with `TTS_PROVIDER` and `GOOGLE_TTS_API_KEY` in their shell), commit `public/media/tts` and the manifest, deploy, then `bun run seed` registers the assets in each database.
+- **Voices** (`lib/audio/providers/google.js`). They were checked against Google's published de-DE list on 2026-09-27:
+
+  | Role | Voice |
+  |---|---|
+  | female | `de-DE-Neural2-F` |
+  | male | `de-DE-Neural2-E` |
+  | female2 | `de-DE-Neural2-C` |
+  | male2 | `de-DE-Wavenet-E` |
+
+  The earlier defaults `Wavenet-B`/`-D` no longer exist. Chirp3-HD voices are rejected because Google documents that they ignore `speakingRate`. Settings: `audioEncoding: MP3`, `speakingRate` slow = 0.85 and normal = 1.0. Every run calls `voices.list` first and stops if a configured voice is missing, has the wrong gender, or is Chirp3-HD.
+- **Flow:**
+  1. `bun run audio:smoke`: voice check, plus 20 sample clips through the production pipeline (every voice, both rates, umlauts, spelling, phone numbers, an e-mail address). Samples are validated and written to `.audio-smoke/…/listen` (gitignored) with a `LISTEN.txt` index. **A person listens to them.**
+  2. `TTS_PROVIDER=google bun run audio:generate -- --voices-verified`: generates only the missing clips into `public/media/tts/<hash>.mp3`. Invalid MP3 responses are never stored. The manifest records voice, `speakingRate`, duration and the run's `settings`.
+  3. `bun run audio:verify` (below).
+  4. Commit `public/media/tts` and `content/audio/manifest.json`, deploy, then run `bun run seed` against each database to register the assets.
+
+  `-- --prune` removes clips that no content uses any more.
+- **Verification** (`lib/audio/verify.js`, `bun run audio:verify`) fails on any of:
+  - a missing clip, or an unexpected (orphan) manifest entry or file
+  - a hash that doesn't match its text, voice and rate
+  - a file name that isn't `tts/<hash>.mp3`, or a size mismatch
+  - an empty file, or one that doesn't parse as MP3 (`lib/audio/mp3.js` walks the frame headers)
+  - a clip shorter than 0.2 s or longer than 60 s
+  - a clip from the `fake` provider, or a non-static driver or non-MP3 entry
+  - any listening exercise or module-test clip that is unavailable
+
+  It warns on byte-identical clips and on durations that look implausible for the text length.
 - **Runtime:** Vercel never needs a TTS key.
 - **Adding a provider:** one file plus one case in `lib/audio/providers/index.js`.
 
@@ -134,7 +202,7 @@ The engine (`engine.js`) builds the learner payload, grades a submission and pro
 | `text_input` | gaps, dictation, form filling. Accepted variants; case, space and punctuation tolerant; `ae/oe/ue/ss` accepted with a spelling hint; optional `ignoreSpaces` for phone numbers | 1 |
 | `match` | pairs. The right side is shuffled deterministically with neutral ids | 1 per pair |
 | `order` | sentence building; alternative correct orders allowed | 1 |
-| `speak_prompt` | speaking practice with model answer and self-rating (recording is Phase 3) | ungraded, never counts for mastery |
+| `speak_prompt` | speaking practice: optional recording (Phase 3), model answer, self-rating | ungraded, never counts for mastery; no pronunciation scoring |
 
 Grading happens only in the service (`learningService.submitExerciseAttempt`). Missing or malformed answers count as wrong, never as errors, and only answers for known item ids are stored. Listening limits (`maxPlays`, `itemAudioMaxPlays`) are enforced in the browser: they are a practice rule, not a security boundary. Shuffling hides the answer order from casual inspection but isn't secret. Exam mode (Phase 5) must not rely on it.
 
@@ -181,7 +249,7 @@ A Content-Security-Policy is still to do (Phase 7).
 | modules | `{levelCode, slug}` unique, `{levelCode, publishStatus, order}` |
 | lessons | `{moduleId, slug}` unique, `{moduleId, publishStatus, order}` |
 | references | `slug` unique, `{parentId, order}` |
-| mediaAssets | `{storage.driver, storage.key}` unique, `{ownerId, createdAt}`, `ttsHash` unique (partial) |
+| mediaAssets | `{storage.driver, storage.key}` unique, `{ownerId, createdAt}`, `ttsHash` unique (partial), `{ownerId, recording.exerciseId, recording.itemId, createdAt}` and `{recording.status, createdAt}` (partial, recordings) |
 | vocabulary | `{levelCode, slug}` unique, `{levelCode, publishStatus}` |
 | grammarTopics | `{levelCode, slug}` unique |
 | exercises | `{levelCode, slug}` unique, `{levelCode, skill, publishStatus}` |
@@ -199,8 +267,23 @@ cp .env.example .env.local      # set MONGODB_URI (Atlas)
 bun run db:indexes              # idempotent; run on each deploy
 bun run seed                    # levels, references, curriculum modules (all draft) + audio registration
 bun run seed -- --update        # also apply changed seed content (changed items go back to draft)
-bun run audio:generate -- --dry-run   # list audio that still needs generating (needs TTS_PROVIDER to generate)
+bun run audio:generate -- --dry-run   # list audio that still needs generating
+bun run audio:smoke                   # real-API voice check + samples to listen to (needs GOOGLE_TTS_API_KEY)
+TTS_PROVIDER=google bun run audio:generate -- --voices-verified
+bun run audio:verify                  # manifest/files/content consistency; exits 1 on problems
 ADMIN_EMAIL=… ADMIN_PASSWORD=… bun run create-admin
+bun run content:check                 # pre-publish report for Module 1
+bun run media:cleanup                 # remove stale unsubmitted recordings (safe to schedule)
 bun run dev
 ```
-On Vercel, set `MONGODB_URI`, `MONGODB_DB` and `APP_URL`, and allow Vercel's egress in the Atlas network access list.
+On Vercel, set `MONGODB_URI`, `MONGODB_DB` and `APP_URL`, and allow Vercel's egress in the Atlas network access list. No TTS key is needed at runtime.
+
+## Testing
+| Command | What | Database |
+|---|---|---|
+| `bun run test` | unit + integration (Vitest) | in-memory MongoDB, one database per file |
+| `bun run test:e2e` | Playwright, desktop Chrome + Pixel 7, fake microphone | in-memory MongoDB (`scripts/e2e-server.mjs`) |
+| `bun run test:atlas` | the integration suite + `tests/atlas/*` (indexes, persistence across a fresh connection, GridFS) | **real Atlas** via `ATLAS_TEST_URI` or `MONGODB_URI`. Throwaway `lga_itest_<run>_<id>` databases, dropped afterwards |
+| `bun run test:e2e:atlas` | browser flow, then **application restart**, then login and persisted-state checks (UI and stored documents) | **real Atlas**, throwaway `lga_e2e_<run>`, dropped unless `--keep` |
+
+The Atlas commands fail if no URI is configured, or if it isn't an Atlas host (unless `ATLAS_ALLOW_NON_ATLAS=1`). They never fall back to an in-memory server. Test helpers refuse to use or drop databases not named `test_*`/`lga_itest_*`.

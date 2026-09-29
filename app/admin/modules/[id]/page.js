@@ -30,6 +30,11 @@ function Row({ kind, item, title, children }) {
       </td>
       <td className="px-4 py-3">
         <StatusBadge status={item.reviewStatus} />
+        {item.reviewStatus === "approved" && item.approvalBasis === "test_fixture" && (
+          <p className="mt-1 max-w-[10rem] text-xs font-medium text-warning-700" data-testid="fixture-approval">
+            Test-fixture approval – not a genuine review
+          </p>
+        )}
       </td>
       <td className="px-4 py-3">
         <StatusBadge status={item.publishStatus} />

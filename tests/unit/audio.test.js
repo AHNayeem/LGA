@@ -90,7 +90,9 @@ describe("TTS providers", () => {
     expect(seen.url).not.toContain("secret-key");
     expect(seen.init.headers["X-Goog-Api-Key"]).toBe("secret-key");
     const body = JSON.parse(seen.init.body);
-    expect(body.voice).toEqual({ languageCode: "de-DE", name: "de-DE-Wavenet-B" });
+    // Defaults come from Google's current de-DE list (Wavenet-B/-D are no longer offered).
+    expect(body.voice).toEqual({ languageCode: "de-DE", name: "de-DE-Neural2-E" });
+    expect(body.audioConfig).toEqual({ audioEncoding: "MP3", speakingRate: 0.85 });
     expect(body.audioConfig.speakingRate).toBeLessThan(1);
     expect(out).toMatchObject({ mime: "audio/mpeg", ext: "mp3" });
   });

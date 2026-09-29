@@ -11,6 +11,7 @@ import ContinueButton from "@/components/learn/ContinueButton";
 import GrammarTopic from "@/components/learn/GrammarTopic";
 import Flashcards from "@/components/learn/Flashcards";
 import ExercisePlayer from "@/components/exercises/ExercisePlayer";
+import AiContentNotice from "@/components/learn/AiContentNotice";
 
 export const metadata = { title: "Lesson" };
 
@@ -91,6 +92,7 @@ export default async function LessonPage({ params, searchParams }) {
         </div>
         <ProgressBar value={(data.completion.done / data.completion.total) * 100} label="Lesson progress" className="mt-1.5" />
       </div>
+      {data.aiGenerated && <AiContentNotice className="mt-4 max-w-2xl" />}
 
       {data.completion.complete && (
         <div className="mt-4">
@@ -155,6 +157,8 @@ export default async function LessonPage({ params, searchParams }) {
                 lessonId={data.lesson.id}
                 exercise={current.exercise}
                 stats={current.stats}
+                recordings={current.recordings ?? null}
+                recordingLimits={current.recordingLimits ?? null}
                 locale={locale}
                 nextHref={nextHref}
                 nextLabel={nextLabel}

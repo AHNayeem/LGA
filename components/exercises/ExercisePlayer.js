@@ -42,8 +42,18 @@ function Stimulus({ stimulus, transcript }) {
 
 // Holds the learner's answers and shows the server's grading. No answer checking happens
 // here: the payload has no answer key, and results come back from submitExerciseAction.
-export default function ExercisePlayer({ lessonId, exercise, stats, locale = "en", nextHref, nextLabel = "Continue" }) {
+export default function ExercisePlayer({
+  lessonId,
+  exercise,
+  stats,
+  recordings = null,
+  recordingLimits = null,
+  locale = "en",
+  nextHref,
+  nextLabel = "Continue",
+}) {
   const [answers, setAnswers] = useState({});
+  const [phase, setPhase] = useState(null); // null | "uploading" | "checking"
   const [outcome, setOutcome] = useState(null);
   const [error, setError] = useState(null);
   const [round, setRound] = useState(0);
@@ -55,12 +65,32 @@ export default function ExercisePlayer({ lessonId, exercise, stats, locale = "en
   const resultById = Object.fromEntries((result?.items ?? []).map((r) => [r.itemId, r]));
   const graded = exercise.maxScore > 0;
 
+  // Item types may need to prepare their answer first (speaking uploads its recording).
+  async function prepareAnswers() {
+    const out = {};
+    for (const item of exercise.items) {
+      const prepare = RENDERERS[item.type]?.prepareAnswer;
+      if (!Object.hasOwn(answers, item.id)) continue;
+      if (prepare) setPhase("uploading");
+      out[item.id] = prepare ? await prepare(answers[item.id], { lessonId, exerciseId: exercise.id, itemId: item.id }) : answers[item.id];
+    }
+    return out;
+  }
+
   function submit() {
     setError(null);
     startTransition(async () => {
-      const res = await submitExerciseAction({ lessonId, exerciseId: exercise.id, answers });
-      if (res.ok) setOutcome(res.data);
-      else setError(res.message);
+      try {
+        const prepared = await prepareAnswers();
+        setPhase("checking");
+        const res = await submitExerciseAction({ lessonId, exerciseId: exercise.id, answers: prepared });
+        if (res.ok) setOutcome(res.data);
+        else setError(res.message);
+      } catch (err) {
+        setError(err?.message || "Something went wrong. Please try again.");
+      } finally {
+        setPhase(null);
+      }
     });
   }
 
@@ -113,11 +143,13 @@ export default function ExercisePlayer({ lessonId, exercise, stats, locale = "en
                     item={item}
                     name={`${exercise.id}-${item.id}-${round}`}
                     value={answers[item.id]}
-                    onChange={(v) => setAnswers((a) => ({ ...a, [item.id]: v }))}
+                    onChange={(v) => setAnswers((a) => ({ ...a, [item.id]: typeof v === "function" ? v(a[item.id]) : v }))}
                     disabled={Boolean(outcome) || pending}
                     reveal={reveal}
                     result={r}
                     locale={locale}
+                    context={{ recordings, recordingLimits }}
+                    submitted={outcome ? { recording: outcome.recordings?.[item.id] ?? null } : null}
                   />
                 ) : (
                   <p className="text-sm text-danger-700">This question type is not supported yet.</p>
@@ -145,7 +177,7 @@ export default function ExercisePlayer({ lessonId, exercise, stats, locale = "en
               disabled={!allAnswered || pending}
               className="inline-flex h-11 items-center rounded-lg bg-brand-600 px-5 font-medium text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {pending ? "Checking…" : graded ? "Check answers" : "Save"}
+              {pending ? (phase === "uploading" ? "Uploading recording…" : graded ? "Checking…" : "Saving…") : graded ? "Check answers" : "Save"}
             </button>
           </div>
         ) : (

@@ -43,3 +43,12 @@ export async function publishLevel(admin, code = "A1") {
   await transitionReview(admin, "levels", { id, to: "approved" });
   await setPublishStatus(admin, "levels", { id, to: "published" });
 }
+
+// Module 1 fully published (content + A1 level) for learner-facing tests.
+export async function publishModule1ForLearners(admin) {
+  const seeded = await seedModule1();
+  await generateModule1Audio();
+  const results = await publishModule(admin, seeded.moduleId);
+  await publishLevel(admin);
+  return { seeded, results };
+}

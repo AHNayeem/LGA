@@ -12,10 +12,17 @@
     "test:unit": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",
     "test:e2e": "playwright test",
+    "test:atlas": "node --import ./scripts/register.mjs scripts/atlas-test.mjs",
+    "test:e2e:atlas": "node --import ./scripts/register.mjs scripts/atlas-e2e.mjs",
     "db:indexes": "node --import ./scripts/register.mjs scripts/ensure-indexes.mjs",
     "seed": "node --import ./scripts/register.mjs scripts/seed.mjs",
     "audio:generate": "node --import ./scripts/register.mjs scripts/generate-audio.mjs",
-    "create-admin": "node --import ./scripts/register.mjs scripts/create-admin.mjs"
+    "audio:smoke": "node --import ./scripts/register.mjs scripts/tts-smoke.mjs",
+    "audio:verify": "node --import ./scripts/register.mjs scripts/verify-audio.mjs",
+    "create-admin": "node --import ./scripts/register.mjs scripts/create-admin.mjs",
+    "content:check": "node --import ./scripts/register.mjs scripts/content-check.mjs",
+    "content:fixture-publish": "node --import ./scripts/register.mjs scripts/fixture-publish.mjs",
+    "media:cleanup": "node --import ./scripts/register.mjs scripts/cleanup-recordings.mjs"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

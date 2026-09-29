@@ -4,6 +4,7 @@ import * as media from "@/lib/services/mediaService";
 import { ROLES } from "@/lib/auth/roles";
 import { ForbiddenError, NotFoundError, ValidationError } from "@/lib/errors";
 import { getStorage, resetStorageDrivers } from "@/lib/storage";
+import { findMediaAssetById } from "@/lib/repositories/mediaAssetRepository";
 
 setupTestDatabase();
 
@@ -24,8 +25,13 @@ describe("learner recordings", () => {
   it("stores a valid recording privately", async () => {
     const user = await createTestUser();
     const asset = await media.uploadLearnerRecording(user, { bytes: webm(), declaredType: "audio/webm;codecs=opus" });
-    expect(asset).toMatchObject({ mime: "audio/webm", visibility: "private", ownerId: user.id, source: "learner" });
-    expect(asset.storage.key).toMatch(new RegExp(`^recordings/${user.id}/.+\\.webm$`));
+    // The caller only gets the public view; storage details stay on the server.
+    expect(Object.keys(asset).sort()).toEqual(["createdAt", "durationSec", "id", "kind", "mime", "size"]);
+    expect(asset).toMatchObject({ mime: "audio/webm", size: 64 });
+    const doc = await findMediaAssetById(asset.id);
+    expect(doc).toMatchObject({ visibility: "private", source: "learner" });
+    expect(String(doc.ownerId)).toBe(user.id);
+    expect(doc.storage.key).toMatch(new RegExp(`^recordings/${user.id}/.+\\.webm$`));
     const { file } = await media.openMedia(user, asset.id);
     expect((await readAll(file.body)).byteLength).toBe(64);
   });

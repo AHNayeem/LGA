@@ -5,6 +5,7 @@ import { orNotFound } from "@/lib/pages";
 import LocalizedText from "@/components/ui/LocalizedText";
 import ProgressBar from "@/components/learn/ProgressBar";
 import SkillMastery from "@/components/learn/SkillMastery";
+import AiContentNotice from "@/components/learn/AiContentNotice";
 
 export const metadata = { title: "Module" };
 
@@ -37,6 +38,7 @@ export default async function ModulePage({ params }) {
       <p className="mt-2 text-sm font-medium text-ink-muted">Module {mod.order}</p>
       <LocalizedText as="h1" text={mod.title} prefer="de" className="text-2xl font-semibold tracking-tight" />
       {mod.description && <LocalizedText as="p" text={mod.description} prefer={locale} className="mt-1 text-ink-muted" />}
+      {mod.aiGenerated && <AiContentNotice className="mt-3 max-w-2xl" />}
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_22rem]">
         <div className="space-y-6">

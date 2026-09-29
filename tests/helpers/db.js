@@ -8,6 +8,8 @@ import { hashPassword } from "@/lib/auth/password";
 // Call once per integration test file.
 export function setupTestDatabase() {
   beforeAll(async () => {
+    const name = (await getDb()).databaseName;
+    if (!/^(test_|lga_itest_)/.test(name)) throw new Error(`Refusing to use database "${name}" for tests.`);
     await ensureIndexes();
   });
   beforeEach(async () => {
@@ -17,6 +19,8 @@ export function setupTestDatabase() {
   });
   afterAll(async () => {
     const db = await getDb();
+    // Only throwaway test databases are ever dropped.
+    if (!/^(test_|lga_itest_)/.test(db.databaseName)) throw new Error(`Refusing to drop database "${db.databaseName}".`);
     await db.dropDatabase();
     await closeClient();
   });

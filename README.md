@@ -27,8 +27,15 @@ Open http://localhost:3000. Learners only see content after an admin reviews, ap
 | `bun run test:e2e` | Playwright E2E. Run `bun run build` first; uses an isolated in-memory DB |
 | `bun run db:indexes` | Create/update MongoDB indexes (idempotent) |
 | `bun run seed` | Insert missing levels, references and curriculum (never overwrites); register generated audio. `-- --update` also applies changed content and sends it back to draft |
-| `bun run audio:generate` | Offline German TTS for all curriculum audio cues (`-- --dry-run` lists what is missing). Needs `TTS_PROVIDER` and a provider key in your shell, never on Vercel |
+| `bun run test:atlas` | Integration tests against a **real Atlas** cluster (`ATLAS_TEST_URI` or `MONGODB_URI`); throwaway databases, dropped afterwards |
+| `bun run test:e2e:atlas` | Browser flow on **real Atlas** with an app restart in the middle (after `bun run build`) |
+| `bun run audio:smoke` | Real-API TTS smoke test: checks voices, writes 20 samples to `.audio-smoke/` for you to listen to |
+| `bun run audio:generate` | Offline German TTS for all curriculum audio cues (`-- --dry-run` lists what is missing; `-- --voices-verified` after the smoke test; `-- --prune` removes unused clips). Needs `TTS_PROVIDER` and a provider key in your shell, never on Vercel |
+| `bun run audio:verify` | Check generated audio against the content: missing/orphan/corrupt/mismatched clips |
 | `bun run create-admin` | Create an admin or promote an existing user (`--reset-password` to replace the password) |
+| `bun run content:check` | Read-only pre-publish report for a module (audio, dependencies, lifecycle, provenance) |
+| `bun run content:fixture-publish` | Dev/test databases only: publish a module with **test-fixture** approvals (not a content review) |
+| `bun run media:cleanup` | Remove speaking recordings that were uploaded but never submitted (older than 24 h) |
 
 The first E2E run needs the browser: `bunx playwright install chromium`.
 

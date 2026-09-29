@@ -6,7 +6,9 @@ import OrderItem from "@/components/exercises/items/OrderItem";
 import SpeakPromptItem from "@/components/exercises/items/SpeakPromptItem";
 
 // Client renderer per item type (the server-side counterpart is lib/exercises/types).
-// Each component also exposes `isAnswered(value, item)` for the submit button state.
+// Each component also exposes `isAnswered(value, item)` for the submit button state, and
+// optionally `prepareAnswer(value, { lessonId, exerciseId, itemId })`, which turns the UI
+// value into the submitted answer (e.g. uploads a speaking recording first).
 export const RENDERERS = {
   mcq: McqItem,
   true_false: TrueFalseItem,

@@ -3,6 +3,7 @@
 import { refresh } from "next/cache";
 import { requireUser } from "@/lib/auth/dal";
 import * as learningService from "@/lib/services/learningService";
+import * as recordingService from "@/lib/services/recordingService";
 import { runAction } from "@/lib/actions/result";
 
 // Thin adapters for the lesson player. Inputs are plain objects; the service validates
@@ -31,5 +32,14 @@ export async function reviewVocabularyAction(input) {
   return runAction("learning.reviewVocabulary", async () => {
     const actor = await requireUser();
     return learningService.reviewVocabulary(actor, input);
+  });
+}
+
+// Deletes one of the learner's own speaking recordings (metadata and bytes). No refresh:
+// progress doesn't change, and the item shows its own "deleted" state.
+export async function deleteRecordingAction(input) {
+  return runAction("learning.deleteRecording", async () => {
+    const actor = await requireUser();
+    return recordingService.deleteOwnRecording(actor, input);
   });
 }

@@ -20,6 +20,8 @@ export async function GET(request, { params }) {
         ...(file.size ? { "Content-Length": String(file.size) } : {}),
         "Cache-Control": asset.visibility === "private" ? "private, no-store" : "private, max-age=3600",
         "X-Content-Type-Options": "nosniff",
+        // Learner uploads: even a crafted file can never run as a document on our origin.
+        ...(asset.source === "learner" ? { "Content-Security-Policy": "default-src 'none'; sandbox", "Content-Disposition": "inline" } : {}),
       },
     });
   } catch (err) {
