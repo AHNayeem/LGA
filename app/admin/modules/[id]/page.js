@@ -4,6 +4,7 @@ import { getModuleReview } from "@/lib/services/contentService";
 import { orNotFound } from "@/lib/pages";
 import { COLLECTIONS } from "@/lib/db/collections";
 import { pickText } from "@/lib/i18n/locales";
+import { editHref, lessonPreviewHref, listHref, newHref } from "@/lib/content/adminSections";
 import StatusBadge from "@/components/ui/StatusBadge";
 import LifecycleControls from "@/components/admin/LifecycleControls";
 import BulkReviewControls from "@/components/admin/BulkReviewControls";
@@ -13,14 +14,17 @@ export const metadata = { title: "Module review" };
 const t = (text) => pickText(text, "de").text;
 const en = (text) => pickText(text, "en").text;
 
-function Row({ kind, item, title, children }) {
+function Row({ kind, item, title, links, children }) {
   return (
     <tr className="border-b border-line align-top last:border-0">
       <td className="px-4 py-3">
         <p className="font-medium" lang="de">
-          {title}
+          <Link href={editHref(kind, item.id)} className="hover:underline">
+            {title}
+          </Link>
         </p>
         <p className="font-mono text-xs text-ink-muted">{item.slug}</p>
+        {links}
         {children && (
           <details className="mt-2 text-sm">
             <summary className="cursor-pointer text-brand-700">Preview content</summary>
@@ -127,6 +131,10 @@ export default async function ModuleReviewPage({ params }) {
         <Link href="/admin" className="hover:underline">
           Content administration
         </Link>
+        {" / "}
+        <Link href={listHref(COLLECTIONS.modules)} className="hover:underline">
+          Modules
+        </Link>
       </nav>
       <h1 className="mt-1 text-2xl font-semibold tracking-tight">
         Review: {mod.levelCode} · <span lang="de">{t(mod.title)}</span>
@@ -136,6 +144,18 @@ export default async function ModuleReviewPage({ params }) {
         {mod.sourceReference ? ` – ${mod.sourceReference}` : ""}. Check the German, the answer keys and the audio before approving.
         Learners see the module only when the level ({level?.code}: {level?.publishStatus ?? "missing"}), the module, its lessons and all their content are published.
       </p>
+
+      <div className="mt-4 flex flex-wrap gap-2 text-sm">
+        <Link href={editHref(COLLECTIONS.modules, mod.id)} className="inline-flex h-9 items-center rounded-lg border border-line bg-surface px-4 font-medium hover:bg-canvas">
+          Edit module
+        </Link>
+        <Link href={newHref(COLLECTIONS.lessons, { moduleId: mod.id })} className="inline-flex h-9 items-center rounded-lg border border-line bg-surface px-4 font-medium hover:bg-canvas">
+          Add lesson
+        </Link>
+        <Link href={listHref(COLLECTIONS.lessons, { moduleId: mod.id, publish: "any" })} className="inline-flex h-9 items-center rounded-lg border border-line bg-surface px-4 font-medium hover:bg-canvas">
+          All lessons (incl. archived)
+        </Link>
+      </div>
 
       <div className="mt-6 rounded-xl border border-line bg-surface p-4">
         <h2 className="text-sm font-semibold">Bulk steps for this module</h2>
@@ -149,7 +169,17 @@ export default async function ModuleReviewPage({ params }) {
 
       <Table id="lessons-heading" title="Lessons" count={lessons.length}>
         {lessons.map((l) => (
-          <Row key={l.id} kind={COLLECTIONS.lessons} item={l} title={t(l.title)}>
+          <Row
+            key={l.id}
+            kind={COLLECTIONS.lessons}
+            item={l}
+            title={t(l.title)}
+            links={
+              <Link href={lessonPreviewHref(l.id)} className="text-sm text-brand-700 hover:underline">
+                Preview as learner
+              </Link>
+            }
+          >
             <ol className="list-decimal pl-5">
               {l.blocks.map((b) => (
                 <li key={b.key}>

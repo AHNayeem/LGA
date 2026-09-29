@@ -11,7 +11,7 @@
 // settings used). Then run `bun run audio:verify`, commit both, and `bun run seed` against
 // each database to register the assets. Keys are read from the shell / .env.local and are
 // never written anywhere.
-import { CURRICULUM } from "@/content/curriculum/index.js";
+import { AUDIO_CONTENT } from "@/content/audioContent.js";
 import { curriculumCues } from "@/lib/audio/cues";
 import { generateAudio } from "@/lib/audio/generate";
 import { fileManifestRegistry, publicDirSink } from "@/lib/audio/fileStore";
@@ -29,7 +29,7 @@ const force = flag("force");
 const prune = flag("prune");
 const providerName = option("provider") ?? process.env.TTS_PROVIDER;
 
-const cues = curriculumCues(CURRICULUM);
+const cues = curriculumCues(AUDIO_CONTENT);
 const registry = fileManifestRegistry();
 
 if (prune) {

@@ -8,9 +8,9 @@
 // otherwise silent fixture clips from the fake provider, stored in GridFS (never public/).
 import { ensureIndexes } from "@/lib/db/indexes";
 import { assertNonProductionDatabase } from "@/lib/config/databaseGuard";
-import { seedCurriculumModule, seedLevels, seedReferences } from "@/lib/services/seedService";
+import { seedCurriculumModule, seedExam, seedLevels, seedReferences } from "@/lib/services/seedService";
 import { ensureAdmin } from "@/lib/services/userAdminService";
-import { bulkModuleTransition, setPublishStatus, transitionReview } from "@/lib/services/contentService";
+import { bulkExamTransition, bulkModuleTransition, setPublishStatus, transitionReview } from "@/lib/services/contentService";
 import { registerTtsAssets } from "@/lib/services/audioService";
 import { APPROVAL_BASIS } from "@/lib/content/lifecycle";
 import { curriculumCues } from "@/lib/audio/cues";
@@ -24,6 +24,8 @@ import { levelRepository } from "@/lib/repositories/contentRepository";
 import { LEVELS } from "@/content/seed/levels";
 import { REFERENCES } from "@/content/seed/references";
 import { CURRICULUM } from "@/content/curriculum/index.js";
+import { EXAMS } from "@/content/exams/index.js";
+import { AUDIO_CONTENT } from "@/content/audioContent.js";
 
 const FIXTURE = { approvalBasis: APPROVAL_BASIS.testFixture };
 
@@ -39,13 +41,13 @@ export async function seedE2EDatabase({ publishLevel = false, log = () => {} } =
   const admin = { id: String(adminDoc._id), role: adminDoc.role };
 
   let audioSource;
-  const real = verifyAudio({ moduleDefs: CURRICULUM, manifestPath: DEFAULT_MANIFEST_PATH, mediaDir: DEFAULT_PUBLIC_MEDIA_DIR });
+  const real = verifyAudio({ moduleDefs: AUDIO_CONTENT, manifestPath: DEFAULT_MANIFEST_PATH, mediaDir: DEFAULT_PUBLIC_MEDIA_DIR });
   if (real.ok) {
     await registerTtsAssets(fileManifestRegistry().present());
     audioSource = "real";
   } else {
     const registry = memoryRegistry();
-    await generateAudio({ cues: curriculumCues(CURRICULUM), provider: createFakeTtsProvider(), sink: storageSink(getStorage("gridfs")), registry });
+    await generateAudio({ cues: curriculumCues(AUDIO_CONTENT), provider: createFakeTtsProvider(), sink: storageSink(getStorage("gridfs")), registry });
     await registerTtsAssets([...registry.entries.values()]);
     audioSource = "fake";
   }
@@ -56,6 +58,15 @@ export async function seedE2EDatabase({ publishLevel = false, log = () => {} } =
     for (const step of ["review", "approve", "publish"]) {
       const r = await bulkModuleTransition(admin, moduleId, step, FIXTURE);
       if (r.failed.length) throw new Error(`E2E seed: ${step} failed: ${JSON.stringify(r.failed)}`);
+    }
+  }
+
+  // Seeded exams, through the same lifecycle (test-fixture approvals).
+  for (const def of EXAMS) {
+    const { examId } = await seedExam(def);
+    for (const step of ["review", "approve", "publish"]) {
+      const r = await bulkExamTransition(admin, examId, step, FIXTURE);
+      if (r.failed.length) throw new Error(`E2E seed: exam ${step} failed: ${JSON.stringify(r.failed)}`);
     }
   }
 

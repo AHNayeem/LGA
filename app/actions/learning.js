@@ -27,6 +27,15 @@ export async function completeBlockAction(input) {
   return result;
 }
 
+// CMS draft preview: grades and reveals like submitExerciseAction but stores nothing.
+// No refresh: nothing on the page changed on the server.
+export async function previewExerciseAction(input) {
+  return runAction("learning.previewExercise", async () => {
+    const actor = await requireUser();
+    return learningService.previewExerciseAttempt(actor, input);
+  });
+}
+
 // No refresh: rating a card shouldn't re-render the deck mid-session.
 export async function reviewVocabularyAction(input) {
   return runAction("learning.reviewVocabulary", async () => {

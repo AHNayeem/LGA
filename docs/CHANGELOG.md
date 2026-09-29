@@ -1,0 +1,83 @@
+# Changelog
+
+Newest first. Details for each phase are in the linked documents.
+
+## 2026-09-29: A1 curriculum expansion and exam engine
+See [CURRICULUM-A1.md](CURRICULUM-A1.md#2b-modules-212-implemented-2026-09-29) and [EXAMS.md](EXAMS.md).
+
+**Curriculum**
+- Modules 2–12 of A1, following the 12-module plan: four lessons and a module test each, and review lessons after modules 3, 6, 9 and 12. The level now has 65 lessons, 622 words, 50 grammar topics and 272 exercises.
+- Everything is AI-drafted, seeded as draft/unpublished, and has no Bangla. It needs review before learners see it.
+- Level-wide integrity tests: no word defined twice, no orphans, and every module registered in order.
+
+**Exams**
+- New content collection `exams`: sections of library exercises, time limit, pass mark and review policy. It goes through the normal review and publish lifecycle.
+- New per-learner collection `examAttempts`:
+  - start and resume
+  - a frozen snapshot of the exam and a secret shuffle seed per attempt
+  - one-time submission, graded on the server by the existing `gradeExercise`
+  - 60 s grace after the deadline, then the attempt is closed as expired
+  - no changes once submitted
+  - result views per policy (summary / marks / full)
+- Learner UI:
+  - *Practice exams* on the level page
+  - `/exams/[level]/[slug]` with the rules and history
+  - `/exams/attempts/[id]` for taking the exam: tasks, palette, timer, confirmation, result and review
+- Admin: `/admin/exams` list, editor, readiness, bulk review of the exam and its exercises, and a preview that writes nothing.
+- Seeded practice exam *A1 Probeprüfung 1*: 35 questions in Goethe format (Hören, Lesen, Schreiben Teil 1), all auto-scored.
+- Engine change: optional `seedPrefix` for shuffles. Default behaviour is unchanged.
+- New indexes: `exams` and `examAttempts`. Run `bun run db:indexes`, then `bun run seed`.
+- Audio tooling (`audio:generate`, `audio:verify`) and the E2E seed now cover the exam's audio (`content/audioContent.js`).
+
+**Tests:** 5 new files (exams unit, exam content, curriculum modules, exams integration, curriculum-a1 integration) and 1 E2E spec. The full suite passes: 396 unit/integration tests, 44 E2E (6 desktop-only skipped on mobile).
+
+## 2026-09-29: CMS Phase 5, curriculum images
+See [CMS.md](CMS.md#cms-phase-5-curriculum-images).
+
+- The media library takes images as well as audio: PNG, JPEG, WebP and GIF, up to `CURRICULUM_IMAGE_MAX_BYTES` (2 MB) and 8000 px per side. SVG is rejected. The server checks the signature, declared type, extension, header structure and dimensions, and stores the width and height.
+- Optional `image: { mediaId, alt, caption? }` on intro blocks, words and exercise stimuli. Alt text is required, in at least one language. Editors get an image panel (picker with thumbnails, preview, change, remove, alt text and caption). Saving follows the normal draft and publish rules.
+- Learners see images in the lesson UI (intro, flashcard answer side, exercise stimulus) and on the `/review` flashcards, and the draft preview uses the same code. Missing or archived images are left out without breaking the lesson.
+- Learner access: an image loads only while approved, published content attaches it. Archive, delete and replace rules and *Used by* now count every place that can reference media.
+- New indexes: `lessons.blocks.image.mediaId`, `vocabulary.image.mediaId`, `exercises.stimulus.image.mediaId`. Run `bun run db:indexes`.
+- Renamed in the admin UI: *Upload audio* is now *Upload media*.
+
+**Tests:** 15 integration, 11 unit and 1 E2E test added. The full suite passes: 268 unit/integration tests, 41 E2E.
+
+## 2026-09-29: CMS Phase 3, draft learner preview
+See [CMS.md](CMS.md#cms-phase-3-draft-learner-preview).
+
+- **Preview as learner** on the lesson editor and the module review page opens `/admin/lessons/[id]/preview`: the real learner lesson UI for a lesson in any lifecycle state, with a Draft preview banner (status, version, unpublished and archived linked items).
+- The learner page and the preview share `buildLessonView` (`curriculumService`) and `components/learn/LessonView.js`. `getLessonPreview` and `previewExerciseAttempt` require `content:read-drafts`.
+- Strictly read-only: exercises are graded and revealed on the server without storing anything. Word ratings, block completion and speaking takes stay in the browser. No rate-limit counter or attempt log is written.
+- Learner routes, APIs, write checks and media access rules are unchanged.
+
+**Tests:** 8 integration tests (including a full database snapshot before and after every preview operation) and 1 E2E test added. The full suite passes: 242 unit/integration tests, 40 E2E.
+
+## 2026-09-29: CMS Phase 2, curriculum media and audio
+See [CMS.md](CMS.md#cms-phase-2-curriculum-media-and-audio).
+
+**Media library**
+- `/admin/media`: list, search, filter by source, status and usage, and page. Upload with progress, preview, metadata editing, file replacement, archive/restore, and deleting unused audio.
+- Upload endpoint `POST /api/admin/media`, replacement `PUT /api/admin/media/:id`. Checks: same-origin request, `media:manage` permission, rate limit and byte limit (`CURRICULUM_MEDIA_MAX_BYTES`, 4 MB); signature, declared type, extension and MP3 structure; server-generated storage keys.
+
+**Exercises**
+- Optional `mediaId` on `stimulus.audio` and `items[].audio`. It is validated on save: it must be an active native or licensed upload.
+- Resolution order: recording, then generated TTS, then unavailable.
+- The exercise editor has an audio panel per listening target (state, TTS status, picker, preview, remove). The exercise list has an *Audio* column.
+- Publishing, module review and `content:check` accept either a recording or TTS.
+
+**Access and data**
+- New `mediaAssets` visibility `linked`: learners can play an upload only while an approved, published exercise uses it.
+- `seed --update` keeps attached recordings.
+- New indexes: `mediaAssets {source, createdAt}`, and `exercises` `stimulus.audio.mediaId` / `items.audio.mediaId`. Run `bun run db:indexes`.
+
+**Tests:** 15 integration, 9 unit and 1 E2E test added. The full suite passes: 234 unit/integration tests, 39 E2E.
+
+## 2026-09-29: CMS Phase 1, admin content authoring
+Admins create and edit levels, modules, lessons (block composer), vocabulary, grammar topics and exercises in `/admin`. See [CMS.md](CMS.md).
+
+## 2026-09-29: A1 Phase 3
+Speaking recordings, the audio production tooling (TTS generation, smoke test, verification) and Atlas validation tooling. See [ARCHITECTURE.md](ARCHITECTURE.md).
+
+## 2026-09-27: A1 Phases 1–2
+Foundation (auth, lifecycle, data layer), then the learning engine and A1 Module 1. See [ARCHITECTURE.md](ARCHITECTURE.md) and [CURRICULUM-A1.md](CURRICULUM-A1.md).

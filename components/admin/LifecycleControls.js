@@ -7,10 +7,16 @@ import SubmitButton from "@/components/ui/SubmitButton";
 const NEXT_REVIEW = { draft: "reviewed", reviewed: "approved" };
 const REVIEW_LABEL = { reviewed: "Mark reviewed", approved: "Approve" };
 
-function ActionForm({ action, kind, id, to, label }) {
+function ActionForm({ action, kind, id, to, label, confirmMessage }) {
   const [state, formAction] = useActionState(action, null);
   return (
-    <form action={formAction} className="inline-flex flex-col">
+    <form
+      action={formAction}
+      className="inline-flex flex-col"
+      onSubmit={(e) => {
+        if (confirmMessage && !window.confirm(confirmMessage)) e.preventDefault();
+      }}
+    >
       <input type="hidden" name="kind" value={kind} />
       <input type="hidden" name="id" value={id} />
       <input type="hidden" name="to" value={to} />
@@ -27,7 +33,9 @@ function ActionForm({ action, kind, id, to, label }) {
 }
 
 // The server decides what is allowed; these buttons only offer the likely next step.
-export default function LifecycleControls({ kind, item }) {
+// Archiving is the soft delete: archived content is hidden from learners and from the
+// default admin lists, and "Restore" returns it to unpublished.
+export default function LifecycleControls({ kind, item, archive = true }) {
   const nextReview = NEXT_REVIEW[item.reviewStatus];
   return (
     <div className="flex flex-wrap gap-2">
@@ -42,6 +50,19 @@ export default function LifecycleControls({ kind, item }) {
       )}
       {item.publishStatus === "published" && (
         <ActionForm action={setPublishStatusAction} kind={kind} id={item.id} to="unpublished" label="Unpublish" />
+      )}
+      {archive && item.publishStatus !== "archived" && (
+        <ActionForm
+          action={setPublishStatusAction}
+          kind={kind}
+          id={item.id}
+          to="archived"
+          label="Archive"
+          confirmMessage="Archive this item? It is hidden from learners and from the default lists. Lessons that use it become unavailable until it is restored and published."
+        />
+      )}
+      {item.publishStatus === "archived" && (
+        <ActionForm action={setPublishStatusAction} kind={kind} id={item.id} to="unpublished" label="Restore" />
       )}
     </div>
   );

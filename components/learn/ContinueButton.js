@@ -5,14 +5,16 @@ import { useRouter } from "next/navigation";
 import { completeBlockAction } from "@/app/actions/learning";
 import Alert from "@/components/ui/Alert";
 
-// Marks a reading block (intro, grammar) as done, then moves on.
-export default function ContinueButton({ lessonId, blockKey, nextHref, label = "Continue" }) {
+// Marks a reading block (intro, grammar) as done, then moves on. In the CMS draft preview
+// nothing is recorded: it only moves on.
+export default function ContinueButton({ lessonId, blockKey, nextHref, label = "Continue", preview = false }) {
   const router = useRouter();
   const [error, setError] = useState(null);
   const [pending, startTransition] = useTransition();
 
   function onClick() {
     setError(null);
+    if (preview) return router.push(nextHref);
     startTransition(async () => {
       const res = await completeBlockAction({ lessonId, blockKey });
       if (!res.ok) return setError(res.message);

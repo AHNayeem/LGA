@@ -2,8 +2,9 @@ import { toClientExercise } from "@/lib/exercises/engine";
 
 // Builds a fully correct (or deliberately wrong) submission from an authored exercise,
 // the way a learner would: by picking options/tokens shown in the client payload.
-export function answersFor(exercise, exerciseId, { wrong = false } = {}) {
-  const client = toClientExercise(exercise, { exerciseId });
+// `seedPrefix`: the per-attempt shuffle seed used in exams.
+export function answersFor(exercise, exerciseId, { wrong = false, seedPrefix = null } = {}) {
+  const client = toClientExercise(exercise, { exerciseId, seedPrefix });
   const answers = {};
   for (const item of exercise.items) {
     const c = client.items.find((i) => i.id === item.id);

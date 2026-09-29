@@ -7,7 +7,7 @@ import { expectedStaticKey } from "@/lib/audio/manifest";
 import { verifyAudio } from "@/lib/audio/verify";
 import { fileManifestRegistry } from "@/lib/audio/fileStore";
 import { makeMp3 } from "@/tests/helpers/mp3";
-import { CURRICULUM } from "@/content/curriculum/index.js";
+import { AUDIO_CONTENT } from "@/content/audioContent.js";
 
 // A tiny curriculum: one listening exercise in a module test, one word.
 const DEFS = [
@@ -141,8 +141,8 @@ describe("audio:verify", () => {
   it("the committed Module 1 audio state is reported, never silently valid", () => {
     // Real audio has not been generated in this repository state: the check must fail
     // clearly (it turns green once `bun run audio:generate` has produced every clip).
-    const r = verifyAudio({ moduleDefs: CURRICULUM, manifestPath: "content/audio/manifest.json", mediaDir: "public/media" });
-    expect(r.summary.neededClips).toBe(curriculumCues(CURRICULUM).size);
+    const r = verifyAudio({ moduleDefs: AUDIO_CONTENT, manifestPath: "content/audio/manifest.json", mediaDir: "public/media" });
+    expect(r.summary.neededClips).toBe(curriculumCues(AUDIO_CONTENT).size);
     if (r.summary.validClips < r.summary.neededClips) expect(r.ok).toBe(false);
   });
 });

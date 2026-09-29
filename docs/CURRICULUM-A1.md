@@ -1,6 +1,6 @@
 # A1 Curriculum
 
-Status: Phase 3. Module 1 is implemented and seeded as draft, and speaking practice now supports recording. Real German audio is generated with the offline tooling once a Google TTS key is available (see "Audio status"). Modules 2–12 are planned.
+Status: all 12 A1 modules are implemented (2026-09-29) and seeded as draft/unpublished, plus the practice exam *A1 Probeprüfung 1* (`EXAMS.md`). Speaking practice supports recording. Real German audio is generated with the offline tooling once a Google TTS key is available (see "Audio status"). Nothing is reviewed or published yet.
 
 Sources: `REFERENCE-ANALYSIS.md` (structure taken from the reference PDFs) and the PDFs in `docs/`. The books and exam papers are used **only for mapping and task formats**. All learner-facing text, dialogues, questions, examples and explanations are original. Nothing is copied from Netzwerk neu, Grammatik aktiv, the glossaries or the Goethe papers.
 
@@ -71,7 +71,7 @@ If no microphone is available, the self-rating still works.
 - **Learner disclosure:** Module 1's lessons and module page show "AI-assisted content, not yet reviewed by a native speaker." Approving the content in `/admin` doesn't remove the notice: an in-app approval is not a native-speaker review.
 - **Names and domains:** fictional people, and `beispiel.de` / `beispiel.com` for e-mail addresses.
 - **Situation prompts:** in English so beginners understand the task. The answers are always German.
-- **Integrity test:** `tests/unit/curriculum-content.test.js` checks that every item validates, every slug and reference resolves, every answer key scores 100% with the right answers and fails with wrong ones, and that no Bangla or approval state is shipped.
+- **Integrity test:** `tests/unit/curriculum-content.test.js` checks that every item validates, every slug and reference resolves, every answer key scores 100% with the right answers and fails with wrong ones, and that no Bangla or approval state is shipped. `tests/unit/curriculum-modules.test.js` runs the same checks on every module and adds the level-wide ones (no orphan words, grammar or exercises; unique slugs and words across modules; a module test at the end; every module directory registered in order). `tests/integration/curriculum-a1.test.js` seeds the whole level and checks order, draft invisibility, learner visibility after publishing and the preview of every lesson.
 
 ### Reviewer checklist (before "approve")
 1. German spelling, grammar and register (du/Sie) in every text, option and example.
@@ -80,6 +80,115 @@ If no microphone is available, the self-rating still works.
 4. Nothing resembles textbook or exam material beyond the task format.
 5. If adding Bangla, have it checked by a Bangla speaker. It resets the item to draft.
 6. Items approved with `bun run content:fixture-publish` (dev/test databases only) are labelled "Test-fixture approval – not a genuine review". Before real learners see the module, they must be sent back to draft and genuinely reviewed and approved. `bun run content:check` lists them.
+
+## 2b. Modules 2–12 (implemented 2026-09-29)
+
+Modules 2–12 follow the plan in §1 one-to-one and use the same structure as Module 1, at a lighter density (product decision, 2026-09-29): **four lessons and a module test** per module, about 50 words and 12–15 exercises in the regular lessons. Modules 3, 6, 9 and 12 add a **Wiederholung** lesson (the Plattform 1–4 review units) before the module test: mixed exercises over the last three modules, no new words.
+
+| # | Module (slug) | Lessons | Grammar | Words | Exercises (items) |
+|---|---|---|---|---|---|
+| 2 | Menschen & Berufe (`menschen-und-berufe`) | Was machst du gern? · Was sind Sie von Beruf? · Arbeitsplätze und Wochentage · Zahlen ab 20 und Formulare · Modultest | vowel-change verbs; sein/haben; ja/nein questions; der/die/das; plural | 50 | 21 (133) |
+| 3 | In der Stadt (`in-der-stadt`) | Was gibt es in der Stadt? · Mit Bus und Bahn · Wie komme ich zum Bahnhof? · Im Sommer ist die Stadt schön · Wiederholung 1–3 · Modultest | ein/eine; kein/nicht; imperative (Sie); adjective after sein | 49 | 25 (144) |
+| 4 | Essen & Einkaufen (`essen-und-einkaufen`) | Essen und Trinken · Im Supermarkt · Was kostet das? · Guten Appetit! · Modultest | accusative; verbs + accusative; mögen/möchten; position 1; gern | 50 | 21 (120) |
+| 5 | Alltag & Familie (`alltag-und-familie`) | Wie spät ist es? · Mein Alltag · Meine Familie · Termine am Telefon · Modultest | clock time; am/um/von … bis; possessives; müssen/können/wollen | 49 | 21 (128) |
+| 6 | Freizeit & Feste (`freizeit-und-feste`) | Wann hast du Geburtstag? · Kommst du mit? · Im Café · Wie war das Fest? · Wiederholung 4–6 · Modultest | dates/ordinals; separable verbs; accusative pronouns; für + Akk.; war/hatte | 49 | 24 (153) |
+| 7 | Arbeit & Büro (`arbeit-und-buero`) | Im Büro · E-Mails im Büro · Mittagspause mit Kollegen · Wo ist …? · Modultest | und/oder/aber; dative article; mit + Dat.; wo? + Dat. | 49 | 22 (117) |
+| 8 | Gesundheit (`gesundheit`) | Der Körper · Mir geht es nicht gut · In der Arztpraxis · Gute Besserung! · Modultest | Was tut weh?; imperative du/ihr/Sie; sollen/müssen/dürfen | 47 | 21 (120) |
+| 9 | Wohnen (`wohnen`) | Meine Wohnung · Ich gehe in die Küche · Wo steht das Sofa? · Wohnungssuche · Wiederholung 7–9 · Modultest | sein + adjective, colours; in + Akk.; two-way prepositions + Dat.; stehen/liegen/hängen | 49 | 24 (140) |
+| 10 | Was hast du gemacht? (`was-hast-du-gemacht`) | Am Wochenende · Schule und Studium · Ich suche eine Stelle · Am Telefon · Modultest | Perfekt with haben; Partizip II; Perfekt with sein (chunks); war/hatte revisited | 50 | 21 (125) |
+| 11 | Kleidung & Kaufhaus (`kleidung-und-kaufhaus`) | Was trägst du? · Die Jacke gefällt mir! · Im Geschäft · Im Kaufhaus · Modultest | welcher/dieser; dative pronouns; verbs with dative; Partizip II (recognition) | 49 | 21 (118) |
+| 12 | Reisen & Wetter (`reisen-und-wetter`) | Urlaub machen · Wie ist das Wetter? · Unterwegs in der Stadt · Grüße aus dem Urlaub · Wiederholung 10–12 · Modultest | man; denn; Wer/Wen/Wem; in/vor/nach/seit + Dat. | 47 | 25 (144) |
+
+**The whole A1 level:** 12 modules, 65 lessons, 622 words, 50 grammar topics, 272 exercises (1,554 items) and 1,570 audio cues (1,600 with the practice exam).
+
+- **Module tests** follow Module 1's pattern: `mini_test` blocks for listening, reading and writing (form filling / guided gap-fill), `mastery_check` blocks for grammar and vocabulary (all at 70%), and one ungraded speaking card. The intro says these are the app's learning targets, not Goethe pass marks.
+- **Skills:** every module has graded vocabulary, grammar, reading, listening and writing exercises, and speaking practice in a lesson as well as in the test. Writing is auto-graded only (forms, gap-filled messages, choosing the fitting sentence). There is no free writing, because nothing can grade it reliably.
+- **Listening difficulty rises:** slow single speakers in modules 2–3, normal-speed dialogues from module 4, and mostly normal speed from module 9. Goethe Hören formats: short dialogues and phone messages played twice, announcements once (modules 3, 11, 12).
+- **Perfekt** (module 10) is taught receptively and with high-frequency verbs only, as decided in §1. The sein-Perfekt is limited to a few movement verbs taught as chunks.
+- **Words are defined once.** Every word, grammar topic and exercise slug is unique across the level, so no word appears as two cards. When a later module needs a word from an earlier one, it uses it in texts without redefining it. `tests/unit/curriculum-modules.test.js` enforces this.
+- **Provenance:** every module is `ai_generated`, with its Netzwerk neu chapter, Grammatik aktiv topics and Goethe task formats as reference metadata only. There is no Bangla.
+
+### Reviewer notes from authoring
+The authoring notes flagged these points for the native-speaker review (in addition to the checklist below):
+- **Fixed chunks with grammar that hasn't been taught yet:** zum/zur, im Mai, zu Hause, Tut mir leid, "Alles Gute zum Geburtstag". The intros present them as phrases.
+- **Words used in texts before they are defined:**
+  - der Eingang appears in module 3 but is defined in module 7
+  - der Stock and das Erdgeschoss appear in modules 7 and 9 but are defined in module 11
+- **Accepted variants to check:** the "in das / in dem" forms in module 9, the imperative forms without -e (Trink / Trinke) in module 8, and the time and price formats in modules 4–6.
+- **Plural judgement calls:** Kilo, Stück and Euro (module 4), der Stock (module 11), das Studium (module 10). der Grad follows Duden (module 12).
+- **Two MCQs to double-check** for exactly one defensible answer: `m8-modalverben-bedeutung` q4 and `m7` lesson 4 q4 ("bei der" vs. "in der" Firma).
+- **Real places** (Kiel, Heidelberg, Hamburg sights) are used for realism. All people, hotels, shops, companies and phone numbers are fictional.
+
+### Content QA findings (2026-09-29)
+A pre-publish QA pass checked modules 1–12 and the practice exam. It used the existing schemas, grading engine, `content:check` and `audio:verify`, plus an AI read-through of every German text. Nothing was changed in the content. The list below adds to the authoring notes above; it replaces none of them. An AI read-through is **not** a native-speaker review: every item still needs a person to confirm or reject it.
+
+**Structurally valid.** No schema, reference, orphan, duplicate or answer-key errors. Every graded exercise scores 100% with the key and fails with wrong answers. Re-checked by hand and still valid:
+- `m8-modalverben-bedeutung` q4 has exactly one defensible answer ("Darf ich hier rauchen?").
+- `m7-wo-ist` q4 offers "bei der / beim / bei dem"; "in der" isn't an option, so there is exactly one answer.
+- The imperative variants in module 8 are complete.
+- The ins/in das and im/in dem variants in module 9 are grammatical.
+- The Perfekt forms and auxiliaries in module 10 are correct.
+- der Grad → die Grade is correct.
+- The phone-number inputs all set `ignoreSpaces`.
+
+**Answer keys that may mark a correct learner wrong** (confirm before approving):
+- `m7-email-lesen` q6 "Frau Berger schreibt die E-Mail." (key: false). The text begins "vielen Dank für Ihre E-Mail", so she did write *an* e-mail. The statement is ambiguous.
+- `m7-email-lesen` q3 and `m6-einladung-lesen` q6 treat a request in the text ("Bitte bringen Sie …", "Könnt ihr bis Mittwoch zusagen?") as a fact (key: true).
+- `m7-bank-hoeren` q3 "Herr Novak hat keinen Ausweis." (key: false). The transcript answers "Haben Sie Ihren Ausweis?" with "Ja, hier ist mein Pass."
+- `m3-haltestelle-hoeren` q3/q4: "Ist das weit? – Nein … fünf Minuten zu Fuß" is unclear about what "das" refers to (the station or the stop).
+- Exam `a1-pp1-hoeren-3-telefon` q1 "When does Clara want to go swimming?": the transcript first mentions the original plan (Mittwoch). The key is the new suggestion (Donnerstag).
+- `m4-position-1-ueben` instruction "Start with the word that has a capital letter" is misleading, because German nouns are capitalised too.
+- `m11-umtausch-formular` q2 label "Artikel (Was?)": learners may type der/die/das.
+
+**Accepted variants to add or check** (text inputs):
+- `m3-test-formular` q4 accepts "7 Parkstraße", which contradicts the address rule taught in module 2.
+- `m9-test-formular` q3 (label "Zimmer") accepts "2/zwei" but not "2 Zimmer / zwei Zimmer".
+- `m8-test-formular` q4 lacks "Husten und Halsschmerzen, aber kein Fieber" (commas inside answers must match).
+- `m5-zu-spaet-schreiben` q4 lacks "gegen".
+- `m5-test-hoeren` q4 and `m5-test-formular` q3/q4: time formats "8 Uhr 45", "von 14:00", "vierzehn" without "Uhr".
+- `m6-test-hoeren` q6 and `m6-datum-ordinal` q7: dates without a space ("19.Mai", "am 1.Januar").
+- `m4-test-hoeren` q4 and `m4-einkaufszettel-schreiben` q2: prices and quantities ("5.80 €", "5 Euro 80", "0,5 Kilo").
+- `m7-test-schreiben` q4: the inverted sentence "Auf dem Schreibtisch liegt mein Computer." is not accepted.
+- `m11-umtausch-formular` q6: "passt nicht".
+- Exam `a1-pp1-schreiben-1-formular` q5: phone formats with "/" or "-".
+- `m7-email-schreiben` q5 accepts "… kaputt aber …" without a comma, against the module's own comma rule.
+
+**Pedagogically questionable** (grammar or words used before they are taught; register):
+- `m9-wdh-grammatik` q8 tests the verb form with *man* ("Hier ___ man nicht rauchen."), but *man* is taught in module 12.
+- `m3-adjektive-sein` q2–q4 use er/es for things before any pronoun-for-things section.
+- `m7-test-schreiben` q6 asks for a formal closing inside an informal (du) e-mail to Tom.
+- `m12-postkarte-schreiben` switches from ich to wir with no companion introduced.
+- More nouns used in module texts before their defining module (in addition to the authoring list; receptive use, so check that they are glossed):
+  - M1: Formular, Adresse, Wohnort, Alter
+  - M1–4: Morgen, Abend, Nacht
+  - M4: Party, Tisch
+  - M5: Geburtstag, Praxis, Problem
+  - M6: Sonne
+  - M7: Aufzug
+  - M8: Bett, Mailbox
+  - M10: Jacke
+- **Audio speed:** module 4 has no `rate: "normal"` line, so every module 4 dialogue plays slowly. §2b says normal-speed dialogues start in module 4. Decide which is intended.
+
+**Needs native-speaker confirmation** (possibly unidiomatic German):
+- "U-Bahn Linie 2 / 1" (`m3-durchsagen-hoeren` q3, `m3-test-hoeren`): standard spelling is "U-Bahn-Linie".
+- der Stock (module 11): the plural is null and the note points to "die Stockwerke". In the "floor" sense the plural is unchanged ("drei Stock").
+- "Zum Bahnhof geht man nur fünf Minuten." (`m12-urlaubsorte-lesen`).
+- "ein Museum besichtigen", and the contradictory weather in the `m12-test-lesen` stimulus ("Die Sonne scheint … am Nachmittag regnet es").
+- "Ich habe schon das Zeugnis: „gut“!" for a language-course result (`m10-lebenslauf-lesen`).
+- "Wir schicken ___ Büro in Hamburg die Datei." (`m7-dativ-artikel` q7): a place as the dative recipient.
+- "Die Ärztin ruft Sie gleich." without "auf" (`m8-praxis-hoeren`).
+- "Frau Doktor" (`m8-modalverben-formen` q8).
+- "Sorry!" in `m9-umzug-lesen`.
+- "in die Zimmer" vs. "in ihre Zimmer" (grammar `m9-in-akkusativ-richtung`).
+- "für es" in the `m6-fuer-akkusativ` paradigm.
+- "Mit der Karte" vs. the more common "mit Karte" (`m7-mit-dativ`).
+
+**Provenance and realism:**
+- Phone numbers in the exam (and in the module forms) use real area codes and mobile prefixes. Consider the Bundesnetzagentur ranges reserved for fiction.
+- Invented business names in real places (Hotel Möwenblick on Rügen, Pension Bergwiese in Garmisch-Partenkirchen, Kaufhaus Brandner …): quick check that none is a real business.
+- The exam's Hören Teil 1 titles use "Beispiel 1–6". In the Goethe format "Beispiel" is the unscored example; the scored items are "Aufgabe".
+
+**Database state seen during QA (`lga_dev`, local development database):** Module 1 `hallo` is approved and published, but none of its lessons are published. Four of its lessons are approved but unpublished. Six items carry a `human_review` approval dated 2026-09-29: 1 module, 1 exercise, 2 words, 2 grammar topics. So learners see an empty module, and the six published items can't be reached through any published lesson. Confirm that these approvals were genuine reviews; if they weren't, send them back to draft in `/admin`. The media library also holds one unattached test upload ("sdfsd", `Unit 02.mp3`, `source: native`, no licence). Remove it unless its licence is documented.
 
 ## 3. Mastery thresholds
 

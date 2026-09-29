@@ -6,6 +6,7 @@ import { completeBlockAction, reviewVocabularyAction } from "@/app/actions/learn
 import AudioPlayer from "@/components/audio/AudioPlayer";
 import LocalizedText from "@/components/ui/LocalizedText";
 import Alert from "@/components/ui/Alert";
+import ContentImage from "@/components/learn/ContentImage";
 
 const ARTICLE_TONE = { der: "text-brand-700", die: "text-danger-700", das: "text-success-700" };
 
@@ -20,8 +21,9 @@ function Word({ card }) {
 
 // Flashcards with self-rating. Ratings update the learner's review schedule on the
 // server (never mastery). In a lesson, the block is completed once every card was rated;
-// the server verifies that before marking it done.
-export default function Flashcards({ cards, locale = "en", mode = "lesson", lessonId, blockKey, nextHref }) {
+// the server verifies that before marking it done. In the CMS draft preview ratings stay
+// in the browser: no review schedule or block completion is written.
+export default function Flashcards({ cards, locale = "en", mode = "lesson", lessonId, blockKey, nextHref, preview = false }) {
   const router = useRouter();
   const [index, setIndex] = useState(0);
   const [revealed, setRevealed] = useState(false);
@@ -34,8 +36,10 @@ export default function Flashcards({ cards, locale = "en", mode = "lesson", less
   function rate(result) {
     setError(null);
     startTransition(async () => {
-      const res = await reviewVocabularyAction({ vocabId: card.id, result });
-      if (!res.ok) return setError(res.message);
+      if (!preview) {
+        const res = await reviewVocabularyAction({ vocabId: card.id, result });
+        if (!res.ok) return setError(res.message);
+      }
       if (index + 1 < cards.length) {
         setIndex(index + 1);
         setRevealed(false);
@@ -46,6 +50,7 @@ export default function Flashcards({ cards, locale = "en", mode = "lesson", less
   }
 
   async function finish() {
+    if (preview) return router.push(nextHref);
     if (mode === "lesson") {
       const res = await completeBlockAction({ lessonId, blockKey });
       if (!res.ok) return setError(res.message);
@@ -81,6 +86,8 @@ export default function Flashcards({ cards, locale = "en", mode = "lesson", less
         </div>
         {revealed ? (
           <div className="mt-5 space-y-2 border-t border-line pt-4">
+            {/* Shown with the answer: a picture of the word would give the meaning away. */}
+            {card.image && <ContentImage key={card.id} image={card.image} locale={locale} imgClassName="max-h-48" />}
             <LocalizedText as="p" text={card.meanings} prefer={locale} className="text-lg font-medium" data-testid="meaning" />
             {card.example && (
               <div className="text-sm">

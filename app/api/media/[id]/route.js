@@ -3,6 +3,11 @@ import { openMedia } from "@/lib/services/mediaService";
 import { isAppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
 
+// Private recordings are never cached. Curriculum uploads ("linked") are revalidated on
+// every play: learner access ends when the exercise is unpublished, and a replaced file
+// keeps its id.
+const CACHE = { private: "private, no-store", linked: "private, no-cache", curriculum: "private, max-age=3600" };
+
 // Serves media by stable id. Authorisation is decided by mediaService.canReadMedia.
 export async function GET(request, { params }) {
   const { id } = await params;
@@ -18,10 +23,11 @@ export async function GET(request, { params }) {
       headers: {
         "Content-Type": file.contentType,
         ...(file.size ? { "Content-Length": String(file.size) } : {}),
-        "Cache-Control": asset.visibility === "private" ? "private, no-store" : "private, max-age=3600",
+        "Cache-Control": CACHE[asset.visibility] ?? "private, no-store",
         "X-Content-Type-Options": "nosniff",
-        // Learner uploads: even a crafted file can never run as a document on our origin.
-        ...(asset.source === "learner" ? { "Content-Security-Policy": "default-src 'none'; sandbox", "Content-Disposition": "inline" } : {}),
+        // Uploads (learner recordings, admin curriculum audio): even a crafted file can
+        // never run as a document on our origin.
+        ...(asset.source !== "tts" ? { "Content-Security-Policy": "default-src 'none'; sandbox", "Content-Disposition": "inline" } : {}),
       },
     });
   } catch (err) {

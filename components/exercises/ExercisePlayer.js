@@ -2,17 +2,20 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { submitExerciseAction } from "@/app/actions/learning";
+import { previewExerciseAction, submitExerciseAction } from "@/app/actions/learning";
 import { RENDERERS, isItemAnswered } from "@/components/exercises/renderers";
 import AudioPlayer from "@/components/audio/AudioPlayer";
 import LocalizedText from "@/components/ui/LocalizedText";
 import Alert from "@/components/ui/Alert";
+import ContentImage from "@/components/learn/ContentImage";
 
 const pct = (r) => `${Math.round((r ?? 0) * 100)}%`;
 
-function Stimulus({ stimulus, transcript }) {
+// Also used by the exam player and result (components/exams).
+export function Stimulus({ stimulus, transcript, locale }) {
   return (
     <div className="space-y-3">
+      {stimulus.image && <ContentImage image={stimulus.image} locale={locale} />}
       {stimulus.audio && <AudioPlayer sources={stimulus.audio.sources} maxPlays={stimulus.audio.maxPlays} label="Play recording" />}
       {stimulus.text && (
         <LocalizedText
@@ -42,6 +45,8 @@ function Stimulus({ stimulus, transcript }) {
 
 // Holds the learner's answers and shows the server's grading. No answer checking happens
 // here: the payload has no answer key, and results come back from submitExerciseAction.
+// In the CMS draft preview (`preview`) answers are graded by previewExerciseAction, which
+// stores nothing, and item types skip their own writes (no recording upload).
 export default function ExercisePlayer({
   lessonId,
   exercise,
@@ -51,6 +56,7 @@ export default function ExercisePlayer({
   locale = "en",
   nextHref,
   nextLabel = "Continue",
+  preview = false,
 }) {
   const [answers, setAnswers] = useState({});
   const [phase, setPhase] = useState(null); // null | "uploading" | "checking"
@@ -71,8 +77,8 @@ export default function ExercisePlayer({
     for (const item of exercise.items) {
       const prepare = RENDERERS[item.type]?.prepareAnswer;
       if (!Object.hasOwn(answers, item.id)) continue;
-      if (prepare) setPhase("uploading");
-      out[item.id] = prepare ? await prepare(answers[item.id], { lessonId, exerciseId: exercise.id, itemId: item.id }) : answers[item.id];
+      if (prepare && !preview) setPhase("uploading");
+      out[item.id] = prepare ? await prepare(answers[item.id], { lessonId, exerciseId: exercise.id, itemId: item.id, preview }) : answers[item.id];
     }
     return out;
   }
@@ -83,7 +89,8 @@ export default function ExercisePlayer({
       try {
         const prepared = await prepareAnswers();
         setPhase("checking");
-        const res = await submitExerciseAction({ lessonId, exerciseId: exercise.id, answers: prepared });
+        const submitAction = preview ? previewExerciseAction : submitExerciseAction;
+        const res = await submitAction({ lessonId, exerciseId: exercise.id, answers: prepared });
         if (res.ok) setOutcome(res.data);
         else setError(res.message);
       } catch (err) {
@@ -113,7 +120,7 @@ export default function ExercisePlayer({
         )}
       </header>
 
-      {exercise.stimulus && <Stimulus key={`s${round}`} stimulus={exercise.stimulus} transcript={outcome?.reveal?.transcript} />}
+      {exercise.stimulus && <Stimulus key={`s${round}`} stimulus={exercise.stimulus} transcript={outcome?.reveal?.transcript} locale={locale} />}
 
       <ol className="space-y-4">
         {exercise.items.map((item, idx) => {
@@ -148,7 +155,7 @@ export default function ExercisePlayer({
                     reveal={reveal}
                     result={r}
                     locale={locale}
-                    context={{ recordings, recordingLimits }}
+                    context={{ recordings, recordingLimits, preview }}
                     submitted={outcome ? { recording: outcome.recordings?.[item.id] ?? null } : null}
                   />
                 ) : (
@@ -177,7 +184,17 @@ export default function ExercisePlayer({
               disabled={!allAnswered || pending}
               className="inline-flex h-11 items-center rounded-lg bg-brand-600 px-5 font-medium text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {pending ? (phase === "uploading" ? "Uploading recording…" : graded ? "Checking…" : "Saving…") : graded ? "Check answers" : "Save"}
+              {pending
+                ? phase === "uploading"
+                  ? "Uploading recording…"
+                  : graded || preview
+                    ? "Checking…"
+                    : "Saving…"
+                : graded
+                  ? "Check answers"
+                  : preview
+                    ? "Finish"
+                    : "Save"}
             </button>
           </div>
         ) : (
@@ -188,7 +205,7 @@ export default function ExercisePlayer({
                   {result.score} / {result.maxScore} points ({pct(result.ratio)})
                 </p>
               ) : (
-                <p className="font-semibold">Saved. Speaking practice is not scored.</p>
+                <p className="font-semibold">{preview ? "Done (not saved in preview)." : "Saved."} Speaking practice is not scored.</p>
               )}
               <p className={`text-sm ${result.passed ? "text-success-700" : "text-warning-700"}`}>
                 {result.passed

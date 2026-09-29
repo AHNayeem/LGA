@@ -17,7 +17,8 @@ const RATINGS = [
 // Practice only: nothing is scored and there is no automated pronunciation feedback.
 //
 // value = { selfRating?, take? }  (take = unsent recording from VoiceRecorder)
-// The recording is uploaded by prepareAnswer when the exercise is submitted.
+// The recording is uploaded by prepareAnswer when the exercise is submitted. In the CMS
+// draft preview (context.preview) the take stays in the browser and is never uploaded.
 
 function PreviousRecording({ recording }) {
   const [state, setState] = useState("idle"); // idle | confirm | deleted
@@ -67,7 +68,8 @@ function PreviousRecording({ recording }) {
 export default function SpeakPromptItem({ item, value, onChange, disabled, reveal, name, context, submitted }) {
   const rating = typeof value === "string" ? value : value?.selfRating;
   const take = typeof value === "object" ? (value?.take ?? null) : null;
-  const previous = context?.recordings?.[item.id] ?? null;
+  const preview = Boolean(context?.preview);
+  const previous = preview ? null : (context?.recordings?.[item.id] ?? null);
   const update = (patch) => onChange((v) => ({ ...(typeof v === "object" && v ? v : {}), ...patch }));
 
   return (
@@ -76,6 +78,7 @@ export default function SpeakPromptItem({ item, value, onChange, disabled, revea
         <LocalizedText as="p" text={item.cue} prefer="de" className="rounded-lg border border-line bg-canvas px-3 py-2 font-medium" />
       )}
       <p className="text-sm text-ink-muted">Say your answer out loud. You can record yourself and listen back. Then rate yourself.</p>
+      {preview && <p className="text-xs text-ink-muted">Preview: recordings stay in this browser and are not uploaded or saved.</p>}
 
       {!submitted && (
         <VoiceRecorder
@@ -132,11 +135,11 @@ SpeakPromptItem.isAnswered = (value) => typeof value === "string" || typeof valu
 
 // Turns the UI value into the submitted answer, uploading a new take first. The upload
 // result is cached on the take, so retrying a failed submission doesn't upload twice.
-SpeakPromptItem.prepareAnswer = async (value, { lessonId, exerciseId, itemId }) => {
+SpeakPromptItem.prepareAnswer = async (value, { lessonId, exerciseId, itemId, preview = false }) => {
   if (typeof value === "string") return value;
   const answer = { selfRating: value.selfRating };
   const take = value.take;
-  if (take) {
+  if (take && !preview) {
     take.uploaded ??= await uploadRecording({ blob: take.blob, lessonId, exerciseId, itemId, durationSec: take.durationSec });
     answer.recordingId = take.uploaded.id;
   }

@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { bulkModuleTransitionAction } from "@/app/actions/content";
+import { bulkExamTransitionAction } from "@/app/actions/exams";
 import SubmitButton from "@/components/ui/SubmitButton";
 
 const STEPS = [
@@ -10,11 +11,11 @@ const STEPS = [
   { step: "publish", label: "Publish all approved" },
 ];
 
-function StepForm({ moduleId, step, label }) {
-  const [state, formAction] = useActionState(bulkModuleTransitionAction, null);
+function StepForm({ moduleId, examId, step, label }) {
+  const [state, formAction] = useActionState(examId ? bulkExamTransitionAction : bulkModuleTransitionAction, null);
   return (
     <form action={formAction} className="flex flex-col gap-1">
-      <input type="hidden" name="moduleId" value={moduleId} />
+      {examId ? <input type="hidden" name="examId" value={examId} /> : <input type="hidden" name="moduleId" value={moduleId} />}
       <input type="hidden" name="step" value={step} />
       <SubmitButton variant="secondary" pendingLabel="Working…" className="h-9 px-3 text-sm">
         {label}
@@ -42,13 +43,14 @@ function StepForm({ moduleId, step, label }) {
   );
 }
 
-// Applies one lifecycle step to every item of the module in the matching state. The server
-// runs each item through the normal per-item rules; nothing skips a step.
-export default function BulkReviewControls({ moduleId }) {
+// Applies one lifecycle step to every item of the module (or of the exam: its exercises and
+// the exam itself) in the matching state. The server runs each item through the normal
+// per-item rules; nothing skips a step.
+export default function BulkReviewControls({ moduleId, examId }) {
   return (
     <div className="flex flex-wrap items-start gap-3">
       {STEPS.map((s) => (
-        <StepForm key={s.step} moduleId={moduleId} {...s} />
+        <StepForm key={s.step} moduleId={moduleId} examId={examId} {...s} />
       ))}
     </div>
   );

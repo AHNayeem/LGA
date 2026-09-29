@@ -1,6 +1,6 @@
 # Architecture
 
-Status: Phase 1 (foundation), Phase 2 (learning engine + A1 Module 1) and Phase 3 (speaking recordings, audio production tooling, Atlas validation tooling) implemented, 2026-09-27. For earlier decisions see `PHASE-0-ARCHITECTURE.md`; where they differ, this file wins. Reference-material findings are in `REFERENCE-ANALYSIS.md`; the curriculum and Module 1 are described in `CURRICULUM-A1.md`.
+Status: Phase 1 (foundation), Phase 2 (learning engine + A1 Module 1) and Phase 3 (speaking recordings, audio production tooling, Atlas validation tooling) implemented, 2026-09-27. CMS Phase 1 (admin authoring of levels, modules, lessons, vocabulary, grammar and exercises) and CMS Phase 2 (curriculum media: recorded audio attached to listening exercises, TTS fallback) implemented 2026-09-29, see `CMS.md`. The full A1 curriculum (12 modules) and the exam engine were added 2026-09-29, see `CURRICULUM-A1.md` and `EXAMS.md`. For earlier decisions see `PHASE-0-ARCHITECTURE.md`; where they differ, this file wins. Reference-material findings are in `REFERENCE-ANALYSIS.md`; the curriculum and Module 1 are described in `CURRICULUM-A1.md`.
 
 ## Stack
 Next.js 16 (App Router), React 19, JavaScript, Tailwind CSS v4, Bun, MongoDB Atlas (native driver), Zod, bcryptjs, server-only. Tests use Vitest with mongodb-memory-server, and Playwright.
@@ -49,7 +49,7 @@ Rules:
 | Login by email (hashed) | 8 / 15 min, cleared on success |
 | Register by IP | 10 / hour |
 | Uploads by user (`POST /api/recordings`) | 60 / hour, checked before the body is read |
-| Learning writes by user (attempts, block completion, flashcard ratings, recording deletion) | 1200 / hour |
+| Learning writes by user (attempts, block completion, flashcard ratings, recording deletion, exam start and submit) | 1200 / hour |
 
 The client IP comes from `x-forwarded-for`, which Vercel sets itself. If the app is ever self-hosted behind a different proxy, that proxy must overwrite this header.
 
@@ -71,7 +71,7 @@ Every content document carries two independent axes plus provenance:
 - New and seeded content is never auto-approved.
 - The rules are pure functions in `lib/content/lifecycle.js`, applied by `lib/services/contentService.js`.
 
-Hierarchy: `levels (code) → modules (levelCode, slug) → lessons (moduleId, slug, blocks[])`. Lessons reference reusable content in `vocabulary`, `grammarTopics` and `exercises` (all lifecycle-managed).
+Hierarchy: `levels (code) → modules (levelCode, slug) → lessons (moduleId, slug, blocks[])`. Lessons reference reusable content in `vocabulary`, `grammarTopics` and `exercises` (all lifecycle-managed). `exams (levelCode, slug, sections[].exerciseIds)` are lifecycle-managed too and reference exercises the same way (see `EXAMS.md`).
 - Lessons hold an ordered, bounded list (≤30) of typed `blocks`. Each block has a stable `key`, so progress survives edits and reordering. The block type decides its shape:
   - `intro {body}` and `grammar {refId}` are content blocks
   - `vocabulary {vocabIds[]}` is a word block
@@ -84,6 +84,7 @@ Hierarchy: `levels (code) → modules (levelCode, slug) → lessons (moduleId, s
 - **Test-fixture approvals.** To validate a module end to end on a dev/test database before a person has reviewed it, `bun run content:fixture-publish` (and the E2E seeding) approve with `approvalBasis: "test_fixture"`. This is **not** a content review: `/admin` shows "Test-fixture approval – not a genuine review" next to each such item, `content:check` warns about them, provenance stays `ai_generated`, and the script refuses to run with `NODE_ENV=production` or on a database whose name doesn't mark it as dev/test (`lib/config/databaseGuard.js`). Content released to real learners needs genuine human approvals.
 - **Learner disclosure.** Lessons and modules with any `ai_generated` content show "AI-assisted content, not yet reviewed by a native speaker." (`components/learn/AiContentNotice.js`). An in-app approval doesn't remove the notice, because it isn't a native-speaker review.
 - **Pre-publish report:** `bun run content:check -- --module a1/hallo` lists missing required audio per lesson (including the module test), published items depending on unpublished ones, lifecycle inconsistencies, provenance changes, approval basis and unreviewed Bangla. It is read-only and exits 1 on errors.
+- **Admin authoring (CMS Phase 1, `CMS.md`).** `/admin` edits every content type through `contentService.saveContent` → `createContent`/`updateContent`, so the schemas, permissions, version checks and edit rule above apply unchanged. Writes also check relationships: a lesson's module and its block references (right collection, no word twice per block) must exist, and a level's code is immutable. Optional fields removed in an editor are cleared (`null`). Archiving (`publishStatus: archived`) is the soft delete.
 - **Bulk module review** (`bulkModuleTransition`, `/admin/modules/[id]`) applies one step (review / approve / publish) to every item of a module that is in the matching state. It runs through the same per-item functions, so no step can be skipped and dependencies are published first.
 
 **Localisation.** Text fields are `{ de?, en?, bn? }` objects, validated by `localizedText()` and NFC-normalised. Adding a locale means adding its code to `lib/i18n/locales.js`; no schema changes are needed. German is the learning language. English and Bangla are explanation languages, with fallback order requested locale → `en` → any.
@@ -92,14 +93,26 @@ Hierarchy: `levels (code) → modules (levelCode, slug) → lessons (moduleId, s
 
 ## Media and audio
 - `mediaAssets` stores `{ kind, mime, storage: { driver, key }, source, visibility, ownerId, voice, language, license, transcript }`. Content refers to media only by asset id, and the UI plays `/api/media/:id`.
+- Three kinds of audio share the collection and never mix:
+  - learner recordings: `source: learner`, `private`, `ownerId` and a `recording` subdocument
+  - generated TTS: `source: tts`, `curriculum`, `ttsHash`
+  - curriculum uploads (CMS Phase 2): `source: native | licensed`, `visibility: linked`, `status: active | archived`, `title`, `originalName`. Uploaded in `/admin/media` and attached to listening exercises by id (`stimulus.audio.mediaId`, `items[].audio.mediaId`)
 - Storage drivers (`lib/storage/*`) share one contract (`put/get/delete/publicUrl`):
   - `static`: read-only files shipped in `public/media/` (pre-generated TTS or recorded curriculum audio). The media route redirects to the CDN URL.
-  - `gridfs`: MongoDB Atlas GridFS for learner recordings. It works on Vercel with no disk and no extra infrastructure. This is the default for `MEDIA_STORAGE_DRIVER`.
+  - `gridfs`: MongoDB Atlas GridFS for learner recordings and admin-uploaded curriculum audio. It works on Vercel with no disk and no extra infrastructure. This is the default for `MEDIA_STORAGE_DRIVER`.
   - `memory`: tests only.
   - Object storage (S3/R2/Vercel Blob) can be added later as one more driver, with no content changes.
-- Uploads are validated by size (`MEDIA_MAX_UPLOAD_BYTES`), by file signature (magic bytes), and by checking the declared MIME type against the detected one (`lib/media/fileTypes.js`). Learner recordings accept only the containers `MediaRecorder` produces: WebM, MP4 and Ogg.
+- Uploads are validated by size, by file signature (magic bytes), and by checking the declared MIME type against the detected one (`lib/media/fileTypes.js`):
+  - learner recordings (`MEDIA_MAX_UPLOAD_BYTES`) accept only the containers `MediaRecorder` produces: WebM, MP4 and Ogg
+  - curriculum uploads (`CURRICULUM_MEDIA_MAX_BYTES`, 4 MB) accept MP3, M4A/MP4, Ogg, WAV and WebM. The file name's extension must also match, and MP3s must parse frame by frame
+  - curriculum images (`CURRICULUM_IMAGE_MAX_BYTES`, 2 MB) accept PNG, JPEG, WebP and GIF, never SVG. The extension must match, the header must parse, and the image may be at most 8000 px per side and 40 megapixels (`lib/media/imageInfo.js`). See [CMS.md](CMS.md#cms-phase-5-curriculum-images)
 - Clients only ever see `publicMediaView(asset)` = `{ id, kind, mime, size, durationSec, createdAt }`. Storage driver, key, GridFS ids and owner never leave the server.
-- Access: `curriculum` assets are readable by any signed-in user. `private` assets are readable by their owner and media managers. Missing and forbidden both return 404, so ids can't be probed.
+- Access (`canReadMedia`):
+  - `curriculum` assets are readable by any signed-in user
+  - `private` assets by their owner and media managers
+  - `linked` assets by media managers, and by learners only while approved, published content (an exercise, word or lesson) attaches them and they are active
+  - missing and forbidden both return 404, so ids can't be probed
+- Resolution order for listening audio (`audioService`): an attached active recording, then generated TTS by cue hash, then (development only) the browser voice, otherwise unavailable. Publishing requires one of the first two for every listening target (`missingRequiredAudio`). See `CMS.md`, Phase 2.
 - Audio playback (`lib/media/audioSource.js`): production uses only pre-generated or recorded assets, with no TTS call per request. Development falls back to browser `speechSynthesis` (de-DE) when no asset exists yet, and the UI labels it as a development preview. The fallback sends the text to the browser, so it is never enabled in production.
 
 ### Speaking recordings (Phase 3)
@@ -204,7 +217,7 @@ The engine (`engine.js`) builds the learner payload, grades a submission and pro
 | `order` | sentence building; alternative correct orders allowed | 1 |
 | `speak_prompt` | speaking practice: optional recording (Phase 3), model answer, self-rating | ungraded, never counts for mastery; no pronunciation scoring |
 
-Grading happens only in the service (`learningService.submitExerciseAttempt`). Missing or malformed answers count as wrong, never as errors, and only answers for known item ids are stored. Listening limits (`maxPlays`, `itemAudioMaxPlays`) are enforced in the browser: they are a practice rule, not a security boundary. Shuffling hides the answer order from casual inspection but isn't secret. Exam mode (Phase 5) must not rely on it.
+Grading happens only in the service (`learningService.submitExerciseAttempt`). Missing or malformed answers count as wrong, never as errors, and only answers for known item ids are stored. Listening limits (`maxPlays`, `itemAudioMaxPlays`) are enforced in the browser: they are a practice rule, not a security boundary. Shuffling hides the answer order from casual inspection but isn't secret. Exams therefore seed it with a secret per-attempt prefix (`seedPrefix`, see `EXAMS.md`).
 
 ### Attempts, progress, mastery, vocabulary
 These are kept apart on purpose:
@@ -216,6 +229,8 @@ These are kept apart on purpose:
 | Module progress | computed on read | blocks done / total, lessons completed |
 | Skill mastery | computed on read (`lib/learning/progress.js`) | **latest** attempt per graded exercise ÷ all available points (unattempted = 0) vs. thresholds resolved level → module → lesson. Skills with no graded content are "not assessed" |
 | Vocabulary review | `userVocabulary` (one doc per user and word) | Leitner boxes 1–5 (10 min, 1, 3, 7, 21 days). Self-rated, so it never feeds mastery |
+| Exam completion | `examAttempts` (one doc per attempt, with a frozen snapshot) | a submitted attempt, graded on the server against the snapshot. Never feeds lesson completion or mastery (`EXAMS.md`) |
+| Level completion | not implemented | no product rule defines it yet |
 
 - **Ids only from the client:** the client sends ids and raw answers. Every write re-checks the whole visibility chain, and an exercise must belong to the lesson it is submitted under.
 - **Rate limit:** learner writes share a 1200/hour limit per user (`learningByUser`).
@@ -249,16 +264,17 @@ A Content-Security-Policy is still to do (Phase 7).
 | modules | `{levelCode, slug}` unique, `{levelCode, publishStatus, order}` |
 | lessons | `{moduleId, slug}` unique, `{moduleId, publishStatus, order}` |
 | references | `slug` unique, `{parentId, order}` |
-| mediaAssets | `{storage.driver, storage.key}` unique, `{ownerId, createdAt}`, `ttsHash` unique (partial), `{ownerId, recording.exerciseId, recording.itemId, createdAt}` and `{recording.status, createdAt}` (partial, recordings) |
+| mediaAssets | `{storage.driver, storage.key}` unique, `{ownerId, createdAt}`, `{source, createdAt}` (media library), `ttsHash` unique (partial), `{ownerId, recording.exerciseId, recording.itemId, createdAt}` and `{recording.status, createdAt}` (partial, recordings) |
 | vocabulary | `{levelCode, slug}` unique, `{levelCode, publishStatus}` |
 | grammarTopics | `{levelCode, slug}` unique |
-| exercises | `{levelCode, slug}` unique, `{levelCode, skill, publishStatus}` |
+| exercises | `{levelCode, slug}` unique, `{levelCode, skill, publishStatus}`, `stimulus.audio.mediaId` and `items.audio.mediaId` (partial, attached recordings) |
 | attempts | `{userId, exerciseId, createdAt}`, `{userId, createdAt}` |
 | userProgress | `{userId, scope, scopeId}` unique, `{userId, moduleId}` |
 | userVocabulary | `{userId, vocabId}` unique, `{userId, dueAt}` |
+| exams | `{levelCode, slug}` unique, `{levelCode, publishStatus, order}`, `sections.exerciseIds` |
+| examAttempts | `{userId, examId}` unique partial (`status: in_progress`), `{userId, examId, startedAt}` |
 | media.files / media.chunks | GridFS (managed by the driver) |
 
-Later collections (`exams`, `examAttempts`) are added to `lib/db/collections.js` and `indexes.js` when they are first used.
 
 ## Operations
 ```

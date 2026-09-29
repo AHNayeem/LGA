@@ -7,7 +7,7 @@ import { SESSION_COOKIE } from "@/lib/auth/cookie";
 //
 // Guest-only pages (/login, /register) are NOT redirected here: a stale or forged cookie
 // would bounce between /login and /dashboard. Those pages verify the session themselves.
-const PROTECTED_PREFIXES = ["/dashboard", "/learn", "/review", "/admin"];
+const PROTECTED_PREFIXES = ["/dashboard", "/learn", "/review", "/exams", "/admin"];
 
 export function proxy(request) {
   const { pathname, search } = request.nextUrl;
@@ -23,5 +23,5 @@ export function proxy(request) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/learn/:path*", "/review/:path*", "/admin/:path*"],
+  matcher: ["/dashboard/:path*", "/learn/:path*", "/review/:path*", "/exams/:path*", "/admin/:path*"],
 };

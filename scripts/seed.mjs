@@ -6,12 +6,13 @@
 // to draft for re-review.
 import { ensureIndexes } from "@/lib/db/indexes";
 import { closeClient } from "@/lib/db/client";
-import { seedCurriculumModule, seedLevels, seedReferences } from "@/lib/services/seedService";
+import { seedCurriculumModule, seedExam, seedLevels, seedReferences } from "@/lib/services/seedService";
 import { registerTtsAssets } from "@/lib/services/audioService";
 import { fileManifestRegistry } from "@/lib/audio/fileStore";
 import { LEVELS } from "@/content/seed/levels";
 import { REFERENCES } from "@/content/seed/references";
 import { CURRICULUM } from "@/content/curriculum/index.js";
+import { EXAMS } from "@/content/exams/index.js";
 
 const update = process.argv.includes("--update");
 
@@ -24,6 +25,10 @@ try {
   for (const def of CURRICULUM) {
     const r = await seedCurriculumModule(def, { update });
     console.log(`Module ${def.levelCode}/${r.module}: inserted ${r.inserted}, updated ${r.updated} (back to draft), unchanged ${r.unchanged}.`);
+  }
+  for (const def of EXAMS) {
+    const r = await seedExam(def, { update });
+    console.log(`Exam ${def.levelCode}/${r.exam}: inserted ${r.inserted}, updated ${r.updated} (back to draft), unchanged ${r.unchanged}.`);
   }
 
   const registry = fileManifestRegistry();

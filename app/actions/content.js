@@ -42,3 +42,26 @@ export async function setPublishStatusAction(_prev, formData) {
   }
   return result;
 }
+
+// CMS editors send a JSON payload { kind, id?, version?, data }. The service validates it
+// with the content schemas, checks relationships and applies the normal lifecycle rules;
+// nothing in the payload can set a review or publish state.
+export async function saveContentAction(input) {
+  const result = await runAction("content.save", async () => {
+    const actor = await requireUser();
+    return contentService.saveContent(actor, input);
+  });
+  if (result.ok) {
+    revalidatePath("/admin", "layout");
+    revalidatePath("/dashboard");
+  }
+  return result;
+}
+
+// Read-only search for the lesson composer's pickers (drafts included, admins only).
+export async function searchContentAction(kind, query) {
+  return runAction("content.search", async () => {
+    const actor = await requireUser();
+    return contentService.searchContentOptions(actor, String(kind), query && typeof query === "object" ? query : {});
+  });
+}
