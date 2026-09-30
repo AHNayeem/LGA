@@ -410,7 +410,7 @@ const L5 = [
           rate: "normal",
         },
       }),
-      typed("q4", ["8:45", "8.45", "08:45", "08.45", "8:45 Uhr", "8.45 Uhr", "08:45 Uhr", "08.45 Uhr", "20:45", "20.45", "20:45 Uhr", "20.45 Uhr"], {
+      typed("q4", ["8:45", "8.45", "08:45", "08.45", "8:45 Uhr", "8.45 Uhr", "08:45 Uhr", "08.45 Uhr", "20:45", "20.45", "20:45 Uhr", "20.45 Uhr", "8 Uhr 45"], {
         prompt: en("At what time is the appointment? Write the time in digits (for example 7:30)."),
         audio: { text: "Hallo, hier ist Marko. Unser Termin ist morgen um Viertel vor neun. Bis morgen!", voice: "male2", rate: "normal" },
       }),
@@ -464,12 +464,12 @@ const L5 = [
       typed("q2", ["Mittwoch", "am Mittwoch"], { label: "Tag" }),
       typed(
         "q3",
-        ["14 Uhr", "14", "14:00", "14.00", "14:00 Uhr", "14.00 Uhr", "2 Uhr", "2", "2:00", "2.00", "zwei Uhr", "zwei", "vierzehn Uhr", "von 14 Uhr", "von 2 Uhr", "von zwei Uhr", "ab 14 Uhr"],
+        ["14 Uhr", "14", "14:00", "14.00", "14:00 Uhr", "14.00 Uhr", "2 Uhr", "2", "2:00", "2.00", "zwei Uhr", "zwei", "vierzehn Uhr", "von 14 Uhr", "von 2 Uhr", "von zwei Uhr", "ab 14 Uhr", "von 14:00", "vierzehn"],
         { label: "Uhrzeit: von" },
       ),
       typed(
         "q4",
-        ["17 Uhr", "17", "17:00", "17.00", "17:00 Uhr", "17.00 Uhr", "5 Uhr", "5", "5:00", "5.00", "fünf Uhr", "fünf", "siebzehn Uhr", "bis 17 Uhr", "bis 5 Uhr", "bis fünf Uhr"],
+        ["17 Uhr", "17", "17:00", "17.00", "17:00 Uhr", "17.00 Uhr", "5 Uhr", "5", "5:00", "5.00", "fünf Uhr", "fünf", "siebzehn Uhr", "bis 17 Uhr", "bis 5 Uhr", "bis fünf Uhr", "bis 17:00", "siebzehn"],
         { label: "Uhrzeit: bis" },
       ),
       typed("q5", ["0221 64 93 07"], { label: "Telefon", ignoreSpaces: true, inputMode: "numeric" }),

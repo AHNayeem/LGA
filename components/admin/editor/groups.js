@@ -3,14 +3,9 @@
 import { SKILLS, SKILL_LABELS } from "@/lib/content/skills";
 import { AddButton, Checkbox, Panel, RowControls, Select, TextInput, move, removeAt, replaceAt } from "@/components/admin/editor/fields";
 import { uid } from "@/components/admin/editor/payload";
+import { SOURCE_TYPE_OPTIONS } from "@/lib/content/constants";
 
 // Field groups shared by several editors.
-
-const SOURCE_TYPE_OPTIONS = [
-  { value: "original", label: "Original (written by our team)" },
-  { value: "ai_generated", label: "AI-generated (needs human review)" },
-  { value: "licensed", label: "Licensed (source reference required)" },
-];
 
 export function ProvenanceFields({ state, set }) {
   // Seeded structural records keep their special source types.

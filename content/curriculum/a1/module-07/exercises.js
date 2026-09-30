@@ -155,10 +155,10 @@ const L2 = [
     items: [
       tf("q1", "Die Besprechung ist am Mittwoch.", false),
       tf("q2", "Die Besprechung ist in Raum 305.", true),
-      tf("q3", "Frau Berger bringt ihren Laptop mit.", true),
+      tf("q3", "Frau Berger muss ihren Laptop mitbringen.", true),
       tf("q4", "Der Computer in Raum 305 funktioniert gut.", false),
       tf("q5", "Frau Berger muss bis Dienstag antworten.", true),
-      tf("q6", "Frau Berger schreibt die E-Mail.", false, { explanation: en("Markus Wagner writes to Frau Berger: „Sehr geehrte Frau Berger, …“.") }),
+      tf("q6", "Die E-Mail hier ist von Frau Berger.", false, { explanation: en("Markus Wagner writes to Frau Berger: „Sehr geehrte Frau Berger, …“.") }),
     ],
     refs: [KAP7, GOETHE_LESEN],
   },
@@ -372,7 +372,7 @@ const L4 = [
     items: [
       mcq("q1", en("What does Mr Novak want?"), [opt("a", "Geld abheben"), opt("b", "ein Konto eröffnen"), opt("c", "eine Karte bezahlen")], "b"),
       tf("q2", "Herr Novak arbeitet bei einer Firma in Leipzig.", true),
-      tf("q3", "Herr Novak hat keinen Ausweis.", false, { explanation: en("He has his passport: „Ja, hier ist mein Pass.“") }),
+      tf("q3", "Herr Novak hat keinen Pass.", false, { explanation: en("He has his passport: „Ja, hier ist mein Pass.“") }),
       mcq("q4", en("Where is the cash machine?"), [opt("a", "am Schalter"), opt("b", "im Flur, neben dem Aufzug"), opt("c", "neben dem Eingang")], "c"),
     ],
     refs: [KAP7, GOETHE_HOEREN],

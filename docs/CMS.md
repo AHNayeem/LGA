@@ -56,7 +56,7 @@ Each action authenticates with `requireUser()` and passes the actor to the servi
 Lists are paginated (50 per page) and filtered through GET parameters, so they are bookmarkable. Every list shows review and visibility badges, test-fixture approvals and AI provenance. `loading.js` and `error.js` in `app/admin` handle the loading and error states. Empty lists explain what to do next. After a create, the editor shows a "created as a draft" notice; after a save, the new version and state.
 
 ## Editors (`components/admin/editor/*`)
-- `payload.js` holds pure conversions between stored documents and editor state. Payload builders drop only empty optional values. Validation is left to the server schemas, and `tests/unit/cms-payload.test.js` round-trips all Module 1 content through them without any change.
+- `payload.js` holds pure conversions between stored documents and editor state. The payload primitives, `slugify` and `vocabularyPayload` live in `lib/content/payload.js` (shared with the bulk vocabulary import) and are re-exported from it. Payload builders drop only empty optional values. Validation is left to the server schemas, and `tests/unit/cms-payload.test.js` round-trips all Module 1 content through them without any change.
 - `EditorShell.js` sends the payload and shows field errors next to the inputs (via `ErrorsContext`) plus a summary of all of them. On a version conflict it offers a reload. It warns before editing approved or published content that saving returns it to draft.
 - `fields.js` and `groups.js` provide inputs, `{de,en,bn}` inputs, list controls (up/down/remove), provenance, tags and reference links, and the mastery editor (inherit / override / "not assessed here" = `null`).
 - `simpleEditors.js` covers levels, modules, vocabulary and grammar. The article is required for nouns (the existing schema rule), and a slug is suggested from the title or lemma for new items.
@@ -438,3 +438,113 @@ Results on 2026-09-29:
 - **The library's default alt text** is plain text (English prefill). Attachments carry their own localised alt text.
 - **`content:check`** reports audio but not images. Publishing itself refuses unusable images.
 - **Removing an image from the library page** is not offered (unlike audio): it's done in the item's editor, linked from *Used by*.
+
+# CMS: bulk vocabulary import
+
+Status: implemented 2026-09-30. An ADMIN can add up to 5,000 words at once in `/admin/vocabulary/import` (linked as *Import words* from the vocabulary list), from a CSV file or rows pasted from Excel or Google Sheets. Nothing is saved until the data has been previewed and the admin imports it.
+
+## What it builds on
+| Existing piece | How the import uses it |
+|---|---|
+| `vocabularySchema` (via `contentSchemaFor`) | Validates every row. The import adds no rules of its own |
+| `vocabularyPayload` and `slugify` (`lib/content/payload.js`, re-exported by the editor's `payload.js`) | Each row fills the word editor's state and becomes exactly the payload the editor would send. An empty slug is made from the lemma, as in the editor |
+| `toStorage`, `initialLifecycle` | Imported words are stored as `createContent` stores them: draft, unpublished, version 1, `createdBy` = the admin |
+| `PERMISSIONS.contentWrite` | Required for preview and import (the permission for creating a word) |
+| `checkSameOrigin`, `readBodyWithLimit`, `enforceRateLimit`, `logger` | CSRF check, body limit, rate limit and audit event, as for curriculum uploads |
+
+## Workflow
+1. **Data.** Upload a `.csv` (UTF-8, comma or semicolon separated) or paste into the text box. An uploaded file is loaded into the same box, so it can be corrected in place. *Download CSV template* gives every column with two example rows.
+2. **Defaults.** Default level (initially *None: every row needs a level*), source type (initially *Original*, the word editor's default) and source reference. They apply only to rows whose cell is empty.
+3. **Preview and check.** The browser parses the data. The server checks every row and every duplicate and writes nothing (`mode=preview`). The table shows each row's spreadsheet row number (the header is row 1), a status (✓ valid, ⚠ warning, ✕ error) and plain-language messages. It shows 200 rows at a time and can be filtered by status.
+4. **Fix.** Remove rows (one by one, or all rows with errors or warnings) and restore them from the *Removed* filter, or edit the data and check again. *Download rows with problems* exports them with their messages in import format. Changing the data or the defaults invalidates the check.
+5. **Import.** This is enabled only when the current check has no errors. The server runs every check again (`mode=commit`) and imports the rows. The button is disabled while the request runs, and a second click is ignored.
+6. **Summary.** Rows in the data, imported, removed (skipped), failed, and imported with a duplicate warning. Failed rows can be downloaded as CSV to fix and import again.
+
+## Format
+The column list is `IMPORT_COLUMNS` in `lib/content/vocabularyImport.js`. The template, the column help on the import page and the header matching all come from it.
+
+| Column | Field | Notes |
+|---|---|---|
+| `lemma` * (or `word`) | `lemma` | Without the article. At most 120 characters |
+| `article` | `article` | `der`, `die`, `das` or empty. Required for nouns |
+| `plural` | `plural` | With article, e.g. `die Sprachen`. Empty if not applicable |
+| `pos` * (or `partOfSpeech`) | `pos` | One of `PARTS_OF_SPEECH`. `proper noun` is read as `proper_noun` |
+| `meaning_en` * (or `translation`), `meaning_de`, `meaning_bn` | `meanings` | English required |
+| `example_de`, `example_en`, `example_bn` | `example` | German required when a translation is given |
+| `notes_en`, `notes_de`, `notes_bn` | `notes` | |
+| `level` (or `levelCode`) | `levelCode` | A1–C2. Empty: the default level |
+| `topics`, `tags` | `topics`, `tags` | Slugs separated by commas or spaces (at most 10 and 20) |
+| `slug` | `slug` | Unique per level. Empty: made from the lemma |
+| `sourceType`, `sourceReference` | provenance | Empty: the defaults. A row with its own source type doesn't inherit the default reference |
+
+- Header names are matched ignoring case, spaces, hyphens and underscores. Columns can be in any order.
+- An unknown column is an error, so data is never dropped silently. `status`, `image` and `refs` get their own explanation: review state can't be imported, and pictures and reference links are added in the word editor.
+- Without a header row (a typical spreadsheet paste), the columns are read in template order: `lemma, article, plural, pos, meaning_en, example_de, example_en, level, …`.
+- Case is normalised for the enum columns only (`Noun`, `a1`, `Die`). Text is NFC-normalised and trimmed by the schema.
+
+**Parser** (`lib/content/csv.js`, no dependency):
+- RFC 4180 quoted fields with `""` escapes, and commas and line breaks inside quotes.
+- LF, CRLF and CR line ends, and a UTF-8 byte order mark.
+- Delimiter detection from the first line, outside quotes: tab, otherwise `;` or `,`.
+- Rows whose cells are all empty are skipped but keep the numbering.
+- An unclosed quote, or text after a closing quote, is reported as an error for that row.
+- Uploaded files must be UTF-8 (in Excel: *CSV UTF-8*); other encodings are refused with that hint.
+- Exports are UTF-8 with a byte order mark and CRLF line ends, so Excel opens them correctly.
+
+## Validation and duplicates
+- The browser only checks structure: size, row count, header, number of cells and cell length. **Every content rule runs on the server**, for the preview and again for the import. The import never relies on an earlier preview.
+- Schema issues become sentences, e.g. `Part of speech "thing" is not supported. Use one of: …`, `Level "A7" is not supported…`, `Word (lemma) is too long (at most 120 characters).` Schema messages that are already sentences (`Nouns need an article`) are kept.
+- **Errors (block the import):** a row the schema rejects, and a level + slug already used by another row or by an existing word, archived words included (the unique index `{levelCode, slug}`).
+- **Warnings (don't block):** the same level, article and lemma (lemma compared ignoring case) as another row or an existing word. The message shows that word's slug and meaning. The CMS allows one word with several meanings (`die Bank`: bench / bank), so the admin decides. Different articles are different words (`der See` / `die See`).
+- Two rows whose generated slugs are the same (`der See`, `die See` → `see`) give an error on the second row. Set the `slug` column to fix it.
+
+## Import and failure behaviour
+- Any row with an error rejects the whole import before anything is written (`ValidationError`, `fieldErrors` keyed `row.<n>`). The page marks those rows.
+- Otherwise the rows are inserted with unordered `insertMany` in chunks of 500 (`vocabularyRepository.insertMany`). Ids are assigned before the write, and after any write error the repository looks up which ids were stored, so the result is exact.
+- A slug taken by someone else between the check and the insert (a race on the unique index) fails that row only, and it is reported. The other rows are imported.
+- A database error stops the import: rows that weren't stored, and all later rows, are reported as failed.
+- No row is reported as imported unless it was stored.
+- There is no transaction: none of the code uses them, and the test database (standalone MongoDB) can't run them.
+
+## Limits
+The limits are set in one place, `IMPORT_LIMITS` in `lib/content/vocabularyImport.js`: at most 5,000 rows, 3 MB (source text and request body) and 2,000 characters per cell. Inserts go in chunks of 500. The schema's field limits (e.g. 120 characters for a lemma) apply on top.
+
+## Endpoint and security
+`POST /api/admin/vocabulary/import?mode=preview|commit`, handled by `app/api/admin/vocabulary/import/route.js` → `lib/http/vocabularyImport.js` → `lib/services/vocabularyImportService.js`. Body: JSON `{ defaults, columns, rows: [[rowNumber, ...cells]] }`.
+- It's a route handler, not a Server Action, so this request can have a 3 MB limit without raising the 1 MB limit of every action.
+- Checks run in this order:
+  1. origin (CSRF, `checkSameOrigin`)
+  2. session
+  3. `content:write`
+  4. rate limit (`vocabularyImportByUser`: 120 previews and imports per admin per hour)
+  5. `Content-Type: application/json`
+  6. body read with the byte limit
+  7. strict request schema (known columns only, unique row numbers)
+  8. the service, which checks the permission again
+- Duplicate checks use two bounded queries (`findByLevelSlugs`, `findByLemmas`), not one per row.
+- **Audit:**
+  - every imported word has `createdBy`/`updatedBy` = the admin
+  - one `vocabulary_import` log event records `importId`, `actor`, `total`, `imported`, `failed`, `warnings` and `levels`
+  - `vocabulary_import_rejected` is logged when rows with errors block an import
+  - no word content is logged
+
+## Tests
+| File | Covers |
+|---|---|
+| `tests/unit/vocabulary-import.test.js` (16) | **Parser:** LF/CRLF/CR, quotes, escaped quotes, commas and line breaks inside quotes (row numbers kept), umlauts/ß and BOM, empty optional cells and empty lines, tab/semicolon/comma detection, quotes inside unquoted fields, unclosed quotes and text after a closing quote, CSV round trip. **Columns:** aliases and case, unsupported columns (`status`, `pronunciation`), duplicate columns, no header row, unreadable rows, row and size limits, the template is valid. **Row → payload:** normalisation, defaults, a row's own source, generated and explicit slugs |
+| `tests/integration/vocabulary-import.test.js` (16) | **Permissions:** USER and anonymous rejected, also when the route's early check is skipped. **Import:** words stored exactly like words saved through the CMS (body, lifecycle, `createdBy`) and editable afterwards; the preview writes nothing; plain-language errors for 14 kinds of invalid row; one error blocks the whole import; malformed requests. **Duplicates:** within the data (slug error, same-word warning, other level fine, `der See` / `die See`); same word with different meanings imported; existing slug (also archived) is an error and an existing word a warning. **Failures:** the unique-slug race fails only that row; `insertMany` reports exactly what was stored; a database error mid-import. **Scale:** 5,000 rows in one request with one lookup per check and 10 insert chunks. **Route:** success, blocked commit, cross-site, anonymous, non-admin, bad mode, wrong content type, bad JSON, over 3 MB, rate limit |
+| `tests/e2e/vocabulary-import.spec.js` (2, desktop) | **Upload:** template download; a CSV with an error and a same-word warning; remove the error row (and find it under *Removed*); import with the progress state and no double submit; summary counts; words in the list as drafts. **Paste:** tab-separated rows without a header; check, then edit (the check is invalidated); a failed import keeps the data; import again; the same rows again are slug errors; export rows with problems |
+
+Results on 2026-09-30:
+- `bun run lint`: clean
+- `bun run test`: 33 files, 428 tests passed
+- `bun run build`: succeeded
+- `bun run test:e2e`: 46 passed, 8 skipped (the desktop-only admin tests on the mobile project)
+
+## Known limitations
+- **No editing in the preview table.** Fix the source text (or the spreadsheet) and check again.
+- **Pictures and reference links** can't be imported. Add them in the word editor.
+- **Imports only create words.** Existing words are never updated, and rows whose slug exists are errors.
+- **Progress** is an indeterminate progress bar, because the import is a single request.
+- **Not atomic across a database failure.** Rows stored before the failure stay imported, and the summary lists exactly which rows failed.
+- Imported words are added to lessons in the lesson composer, as before.

@@ -1,5 +1,5 @@
-import { EXPLANATION_LOCALES, LEARNING_LANGUAGE } from "@/lib/i18n/locales";
 import { SKILLS } from "@/lib/content/skills";
+import { LOCALES, commonPayload, imagePayload, locOptional, locRequired, slugList, str, withOptional } from "@/lib/content/payload";
 
 // Pure conversions between stored content documents and the admin editors' form state.
 //   *State(doc)    document (or nothing, for "new") → editable state (strings, flags)
@@ -7,8 +7,11 @@ import { SKILLS } from "@/lib/content/skills";
 // No validation happens here: the server's Zod schemas are the single source of truth and
 // their field errors are shown next to the inputs. Payload builders only drop empty
 // optional values, so an untouched optional field is never sent as "".
+//
+// The primitives, `slugify` and `vocabularyPayload` live in lib/content/payload.js because
+// the bulk vocabulary import builds the same payload; they are re-exported here unchanged.
 
-export const LOCALES = Object.freeze([LEARNING_LANGUAGE, ...EXPLANATION_LOCALES]);
+export { LOCALES, commonPayload, imagePayload, locOptional, locRequired, slugify, vocabularyPayload } from "@/lib/content/payload";
 
 let uidCounter = 0;
 // React list keys for rows (never rendered into the DOM).
@@ -18,43 +21,12 @@ export const uid = () => `r${++uidCounter}`;
 
 export const locState = (v) => Object.fromEntries(LOCALES.map((k) => [k, v?.[k] ?? ""]));
 
-export function locOptional(v) {
-  const out = {};
-  for (const k of LOCALES) if (typeof v?.[k] === "string" && v[k].trim()) out[k] = v[k];
-  return Object.keys(out).length ? out : undefined;
-}
-
-// Required localised fields are always sent, so the server reports which language is missing.
-export const locRequired = (v) => locOptional(v) ?? {};
-
-const str = (v) => (v == null || String(v).trim() === "" ? undefined : String(v));
 const num = (v) => (v === "" || v == null ? undefined : Number(v));
 export const lines = (v) =>
   String(v ?? "")
     .split("\n")
     .map((s) => s.trim())
     .filter(Boolean);
-const slugList = (v) =>
-  String(v ?? "")
-    .split(/[,\s]+/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-
-export function slugify(value) {
-  return String(value ?? "")
-    .normalize("NFC")
-    .toLowerCase()
-    .replace(/ä/g, "ae")
-    .replace(/ö/g, "oe")
-    .replace(/ü/g, "ue")
-    .replace(/ß/g, "ss")
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 80)
-    .replace(/-+$/g, "");
-}
 
 // Next free id of the form `${prefix}${n}` (items q1, q2 …; pairs p1 …).
 export function nextId(prefix, taken) {
@@ -77,15 +49,6 @@ export function commonState(doc) {
     refs: (doc?.refs ?? []).map((r) => ({ uid: uid(), referenceId: r.referenceId ?? "", note: r.note ?? "" })),
     sourceType: doc?.sourceType ?? "original",
     sourceReference: doc?.sourceReference ?? "",
-  };
-}
-
-export function commonPayload(s) {
-  return {
-    tags: slugList(s.tags),
-    refs: s.refs.filter((r) => r.referenceId).map((r) => ({ referenceId: r.referenceId, ...(str(r.note) ? { note: r.note } : {}) })),
-    sourceType: s.sourceType,
-    ...(str(s.sourceReference) ? { sourceReference: s.sourceReference } : {}),
   };
 }
 
@@ -125,14 +88,9 @@ const basePayload = (s) => ({
   ...commonPayload(s),
 });
 
-const withOptional = (obj) => Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined));
-
 // An attached image from the media library (intro blocks, words, exercise stimuli):
 // its id plus alt text and caption for this place. No id = no image.
 export const imageState = (img) => ({ mediaId: img?.mediaId ?? "", alt: locState(img?.alt), caption: locState(img?.caption) });
-
-export const imagePayload = (s) =>
-  str(s?.mediaId) ? withOptional({ mediaId: s.mediaId, alt: locRequired(s.alt), caption: locOptional(s.caption) }) : undefined;
 
 // --- Levels and modules -------------------------------------------------------------------
 
@@ -260,22 +218,6 @@ export const vocabularyState = (doc, defaults = {}) => ({
   topics: (doc?.topics ?? []).join(", "),
   ...commonState(doc),
 });
-
-export const vocabularyPayload = (s) =>
-  withOptional({
-    levelCode: s.levelCode,
-    slug: str(s.slug),
-    lemma: s.lemma,
-    article: s.article || null,
-    plural: str(s.plural) ?? null,
-    pos: s.pos,
-    meanings: locRequired(s.meanings),
-    example: locOptional(s.example),
-    notes: locOptional(s.notes),
-    image: imagePayload(s.image),
-    topics: slugList(s.topics),
-    ...commonPayload(s),
-  });
 
 // --- Grammar topics ------------------------------------------------------------------------
 

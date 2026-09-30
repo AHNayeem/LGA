@@ -167,7 +167,7 @@ A pre-publish QA pass checked modules 1–12 and the practice exam. It used the 
   - M7: Aufzug
   - M8: Bett, Mailbox
   - M10: Jacke
-- **Audio speed:** module 4 has no `rate: "normal"` line, so every module 4 dialogue plays slowly. §2b says normal-speed dialogues start in module 4. Decide which is intended.
+- **Audio speed (decided):** normal-speed dialogues start in module 4, as §2b says. The dialogue lines of `m4-markt-hoeren` and `m6-im-cafe-hoeren` now use `rate: "normal"`. All other cues keep their existing rate (explicit, or the `slow` default).
 
 **Needs native-speaker confirmation** (possibly unidiomatic German):
 - "U-Bahn Linie 2 / 1" (`m3-durchsagen-hoeren` q3, `m3-test-hoeren`): standard spelling is "U-Bahn-Linie".

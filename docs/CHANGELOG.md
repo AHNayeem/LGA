@@ -2,6 +2,19 @@
 
 Newest first. Details for each phase are in the linked documents.
 
+## 2026-09-30: Bulk vocabulary import
+See [CMS.md](CMS.md#cms-bulk-vocabulary-import).
+- New page `/admin/vocabulary/import`: up to 5,000 words per import, from a CSV file (UTF-8, comma or semicolon separated) or rows pasted from a spreadsheet. A CSV template can be downloaded.
+- The preview shows errors and warnings per row. Rows can be removed, and rows with problems or rows that failed can be exported as CSV.
+- The word editor's rules apply: every row becomes the editor's payload and is validated with `vocabularySchema` on the server, for the preview and again for the import. A duplicate level + slug is an error; the same word is a warning. Imported words are drafts.
+- New files:
+  - `POST /api/admin/vocabulary/import` (origin check, `content:write`, rate limit, 3 MB body)
+  - `lib/content/csv.js` (RFC 4180 parser)
+  - `lib/content/vocabularyImport.js`
+  - `lib/services/vocabularyImportService.js`
+- New repository methods: `insertMany` and `findByLevelSlugs` in the content repository, and `vocabularyRepository.findByLemmas`.
+- The CMS source-type options moved to `lib/content/constants.js` (`SOURCE_TYPE_OPTIONS`), shared by the word editor and the import.
+
 ## 2026-09-29: A1 curriculum expansion and exam engine
 See [CURRICULUM-A1.md](CURRICULUM-A1.md#2b-modules-212-implemented-2026-09-29) and [EXAMS.md](EXAMS.md).
 

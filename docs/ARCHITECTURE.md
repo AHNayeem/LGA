@@ -50,6 +50,7 @@ Rules:
 | Register by IP | 10 / hour |
 | Uploads by user (`POST /api/recordings`) | 60 / hour, checked before the body is read |
 | Learning writes by user (attempts, block completion, flashcard ratings, recording deletion, exam start and submit) | 1200 / hour |
+| Bulk vocabulary import by user (previews and imports, `POST /api/admin/vocabulary/import`) | 120 / hour |
 
 The client IP comes from `x-forwarded-for`, which Vercel sets itself. If the app is ever self-hosted behind a different proxy, that proxy must overwrite this header.
 
@@ -85,6 +86,7 @@ Hierarchy: `levels (code) → modules (levelCode, slug) → lessons (moduleId, s
 - **Learner disclosure.** Lessons and modules with any `ai_generated` content show "AI-assisted content, not yet reviewed by a native speaker." (`components/learn/AiContentNotice.js`). An in-app approval doesn't remove the notice, because it isn't a native-speaker review.
 - **Pre-publish report:** `bun run content:check -- --module a1/hallo` lists missing required audio per lesson (including the module test), published items depending on unpublished ones, lifecycle inconsistencies, provenance changes, approval basis and unreviewed Bangla. It is read-only and exits 1 on errors.
 - **Admin authoring (CMS Phase 1, `CMS.md`).** `/admin` edits every content type through `contentService.saveContent` → `createContent`/`updateContent`, so the schemas, permissions, version checks and edit rule above apply unchanged. Writes also check relationships: a lesson's module and its block references (right collection, no word twice per block) must exist, and a level's code is immutable. Optional fields removed in an editor are cleared (`null`). Archiving (`publishStatus: archived`) is the soft delete.
+- **Bulk vocabulary import** (`/admin/vocabulary/import`, `CMS.md`) validates every row with `vocabularySchema` on the server (for the preview, and again for the import) and inserts the words as drafts with the normal initial lifecycle. A level + slug that is already used is an error; the same word (level, article, lemma) is a warning.
 - **Bulk module review** (`bulkModuleTransition`, `/admin/modules/[id]`) applies one step (review / approve / publish) to every item of a module that is in the matching state. It runs through the same per-item functions, so no step can be skipped and dependencies are published first.
 
 **Localisation.** Text fields are `{ de?, en?, bn? }` objects, validated by `localizedText()` and NFC-normalised. Adding a locale means adding its code to `lib/i18n/locales.js`; no schema changes are needed. German is the learning language. English and Bangla are explanation languages, with fallback order requested locale → `en` → any.

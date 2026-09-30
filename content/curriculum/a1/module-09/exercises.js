@@ -366,7 +366,7 @@ const L5 = [
       mcq("q5", de("Herr Kaya, … bitte morgen um neun Uhr!"), [opt("a", "komm"), opt("b", "kommt"), opt("c", "kommen Sie")], "c"),
       mcq("q6", de("Lena, … viel Wasser!"), [opt("a", "trink"), opt("b", "trinkt"), opt("c", "trinken Sie")], "a"),
       gap("q7", "Der Arzt sagt, ich", "viel schlafen. (sollen)", ["soll"]),
-      gap("q8", "Hier", "man nicht rauchen. (dürfen)", ["darf"]),
+      gap("q8", "Hier", "ich nicht rauchen. (dürfen)", ["darf"]),
       mcq("q9", de("Wohin gehst du? – … Bad."), [opt("a", "Ins"), opt("b", "Im"), opt("c", "In der")], "a"),
       mcq("q10", de("Wo ist der Drucker? – Er steht … Büro."), [opt("a", "ins"), opt("b", "im"), opt("c", "in die")], "b"),
     ],
@@ -517,7 +517,7 @@ const L6 = [
     items: [
       typed("q1", ["Ortiz"], { label: "Familienname" }),
       typed("q2", ["Bremen"], { label: "Stadt" }),
-      typed("q3", ["2", "zwei"], { label: "Zimmer" }),
+      typed("q3", ["2", "zwei", "2 Zimmer", "zwei Zimmer"], { label: "Zimmer" }),
       typed("q4", ["700 €", "700", "700 Euro", "700 EUR", "700,00 €", "700,00 Euro", "700,- €"], { label: "Miete (maximal)", ignoreSpaces: true }),
       typed("q5", ["ja"], { label: "Balkon (ja / nein)" }),
       typed("q6", ["d.ortiz@beispiel.de"], { label: "E-Mail", inputMode: "email", ignoreSpaces: true }),

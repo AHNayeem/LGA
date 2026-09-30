@@ -531,7 +531,7 @@ const L6 = [
       typed("q1", ["Ravi"], { label: "Vorname" }),
       typed("q2", ["Sharma"], { label: "Familienname" }),
       typed("q3", ["Hamburg"], { label: "Wohnort" }),
-      typed("q4", ["Parkstraße 7", "Parkstr. 7", "Parkstr 7", "Parkstraße Nr. 7", "7 Parkstraße"], { label: "Straße und Hausnummer" }),
+      typed("q4", ["Parkstraße 7", "Parkstr. 7", "Parkstr 7", "Parkstraße Nr. 7"], { label: "Straße und Hausnummer" }),
       typed("q5", ["Oktober"], { label: "Monat" }),
       typed("q6", ["0176 58 20 43"], { label: "Handynummer", ignoreSpaces: true, inputMode: "numeric" }),
     ],

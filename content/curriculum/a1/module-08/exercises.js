@@ -495,6 +495,8 @@ const L5 = [
           "Halsschmerzen und Husten, kein Fieber",
           "Husten, Halsschmerzen, kein Fieber",
           "Halsschmerzen, Husten, kein Fieber",
+          "Husten und Halsschmerzen, aber kein Fieber",
+          "Husten, Halsschmerzen, aber kein Fieber",
           "Sie hat Husten und Halsschmerzen",
           "Sie hat Halsschmerzen und Husten",
           "Husten und Halsweh",

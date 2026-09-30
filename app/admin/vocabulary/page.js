@@ -18,7 +18,14 @@ export default async function VocabularyPage({ searchParams }) {
         crumbs={[{ href: "/admin", label: "Admin" }]}
         title="Vocabulary"
         description="The word library. Words are reusable: lessons link to them from vocabulary blocks."
-        actions={<ButtonLink href={newHref("vocabulary", list.query.level ? { level: list.query.level } : undefined)}>New word</ButtonLink>}
+        actions={
+          <>
+            <ButtonLink href="/admin/vocabulary/import" variant="secondary">
+              Import words
+            </ButtonLink>
+            <ButtonLink href={newHref("vocabulary", list.query.level ? { level: list.query.level } : undefined)}>New word</ButtonLink>
+          </>
+        }
       />
       <FilterBar
         action="/admin/vocabulary"

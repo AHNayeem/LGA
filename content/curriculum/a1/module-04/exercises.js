@@ -166,7 +166,7 @@ const L2 = [
     },
     items: [
       typed("q1", ["1 Kilo", "ein Kilo", "1 kg", "ein kg", "1 Kilogramm", "ein Kilogramm"], { label: "Kartoffeln", ignoreSpaces: true }),
-      typed("q2", ["500 Gramm", "500 g", "fünfhundert Gramm", "ein halbes Kilo", "0,5 kg"], { label: "Käse", ignoreSpaces: true }),
+      typed("q2", ["500 Gramm", "500 g", "fünfhundert Gramm", "ein halbes Kilo", "0,5 kg", "0,5 Kilo"], { label: "Käse", ignoreSpaces: true }),
       typed("q3", ["3 Flaschen", "drei Flaschen"], { label: "Wasser", ignoreSpaces: true }),
       typed("q4", ["1 Packung", "eine Packung"], { label: "Butter", ignoreSpaces: true }),
       typed("q5", ["6", "sechs", "6 Stück", "sechs Stück", "6 Tomaten", "sechs Tomaten"], { label: "Tomaten", ignoreSpaces: true }),
@@ -203,14 +203,14 @@ const L3 = [
       textKind: "dialogue",
       audio: {
         lines: [
-          { speaker: "Verkäuferin", text: "Guten Tag! Was möchten Sie?", voice: "female" },
-          { speaker: "Herr Aydin", text: "Guten Tag! Ich möchte ein Kilo Tomaten, bitte.", voice: "male" },
-          { speaker: "Verkäuferin", text: "Gern. Sonst noch etwas?", voice: "female" },
-          { speaker: "Herr Aydin", text: "Haben Sie auch Bananen?", voice: "male" },
-          { speaker: "Verkäuferin", text: "Nein, heute haben wir leider keine Bananen. Aber die Äpfel sind sehr gut.", voice: "female" },
-          { speaker: "Herr Aydin", text: "Gut, dann zwei Kilo Äpfel, bitte. Das ist alles. Was kostet das?", voice: "male" },
-          { speaker: "Verkäuferin", text: "Das macht zusammen sieben Euro zwanzig.", voice: "female" },
-          { speaker: "Herr Aydin", text: "Hier, bitte. Auf Wiedersehen!", voice: "male" },
+          { speaker: "Verkäuferin", text: "Guten Tag! Was möchten Sie?", voice: "female", rate: "normal" },
+          { speaker: "Herr Aydin", text: "Guten Tag! Ich möchte ein Kilo Tomaten, bitte.", voice: "male", rate: "normal" },
+          { speaker: "Verkäuferin", text: "Gern. Sonst noch etwas?", voice: "female", rate: "normal" },
+          { speaker: "Herr Aydin", text: "Haben Sie auch Bananen?", voice: "male", rate: "normal" },
+          { speaker: "Verkäuferin", text: "Nein, heute haben wir leider keine Bananen. Aber die Äpfel sind sehr gut.", voice: "female", rate: "normal" },
+          { speaker: "Herr Aydin", text: "Gut, dann zwei Kilo Äpfel, bitte. Das ist alles. Was kostet das?", voice: "male", rate: "normal" },
+          { speaker: "Verkäuferin", text: "Das macht zusammen sieben Euro zwanzig.", voice: "female", rate: "normal" },
+          { speaker: "Herr Aydin", text: "Hier, bitte. Auf Wiedersehen!", voice: "male", rate: "normal" },
         ],
       },
       maxPlays: 2,
@@ -350,7 +350,7 @@ const L5 = [
       mcq("q3", en("What doesn't Tom like?"), abc("Fleisch", "Fisch", "Gemüse"), "c", {
         audio: { text: "Ich heiße Tom. Ich esse gern Fleisch und Fisch. Gemüse mag ich nicht.", voice: "male2", rate: "slow" },
       }),
-      typed("q4", ["5,80 €", "5,80", "5,80 Euro", "5.80", "5,8", "fünf Euro achtzig"], {
+      typed("q4", ["5,80 €", "5,80", "5,80 Euro", "5.80", "5,8", "fünf Euro achtzig", "5.80 €", "5 Euro 80", "5,80 EUR"], {
         prompt: en("How much is it? Write the price (for example 2,50 €)."),
         audio: { text: "Das macht zusammen fünf Euro achtzig.", voice: "female2", rate: "slow" },
         ignoreSpaces: true,

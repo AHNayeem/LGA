@@ -81,7 +81,7 @@ const L1 = [
       gap("q4", "Heute ist der", "Oktober. (20.)", ["zwanzigste"], { explanation: en("From 20 on, add -ste: zwanzigste.") }),
       gap("q5", "Mein Geburtstag ist am", "August. (2.)", ["zweiten"]),
       gap("q6", "Morgen ist der", "Dezember. (31.)", ["einunddreißigste"]),
-      typed("q7", ["am ersten Januar", "am 1. Januar", "am 1 Januar", "am 1.1.", "am 01.01.", "am ersten Ersten", "ersten Januar", "1. Januar", "1 Januar"], {
+      typed("q7", ["am ersten Januar", "am 1. Januar", "am 1 Januar", "am 1.1.", "am 01.01.", "am ersten Ersten", "ersten Januar", "1. Januar", "1 Januar", "am 1.Januar"], {
         prompt: en("When is New Year's Day? Answer in German with „am …“."),
       }),
       mcq("q8", de("Wann hast du Geburtstag?"), [opt("a", "Der vierte April."), opt("b", "Am vierten April."), opt("c", "Am vierte April.")], "b", {
@@ -179,7 +179,7 @@ const L2 = [
       tf("q3", "Lukas macht das Essen.", true),
       tf("q4", "Lukas bringt die Getränke mit.", false),
       tf("q5", "Lukas ruft Anna am Freitag an.", false, { explanation: en("Lukas asks Anna: „Kannst du mich am Freitag anrufen?“ – Anna calls Lukas.") }),
-      tf("q6", "Die Gäste sagen bis Mittwoch zu oder ab.", true),
+      tf("q6", "Lukas fragt die Gäste: Sagt ihr bis Mittwoch zu oder ab?", true),
     ],
     refs: [KAP6, GOETHE_LESEN],
   },
@@ -257,16 +257,16 @@ const L3 = [
       textKind: "dialogue",
       audio: {
         lines: [
-          { speaker: "Kellnerin", text: "Guten Tag! Was möchten Sie trinken?", voice: "female" },
-          { speaker: "Herr Adler", text: "Guten Tag! Ich möchte einen Kaffee, bitte. Und für meine Frau einen Tee.", voice: "male" },
-          { speaker: "Kellnerin", text: "Gern. Möchten Sie auch etwas essen?", voice: "female" },
-          { speaker: "Frau Adler", text: "Ja, zwei Stück Apfelkuchen, bitte.", voice: "female2" },
-          { speaker: "Herr Adler", text: "Entschuldigung! Wir möchten bezahlen, bitte.", voice: "male" },
-          { speaker: "Kellnerin", text: "Zusammen oder getrennt?", voice: "female" },
-          { speaker: "Herr Adler", text: "Zusammen, bitte.", voice: "male" },
-          { speaker: "Kellnerin", text: "Das macht vierzehn Euro achtzig.", voice: "female" },
-          { speaker: "Herr Adler", text: "Hier sind sechzehn Euro. Stimmt so.", voice: "male" },
-          { speaker: "Kellnerin", text: "Vielen Dank!", voice: "female" },
+          { speaker: "Kellnerin", text: "Guten Tag! Was möchten Sie trinken?", voice: "female", rate: "normal" },
+          { speaker: "Herr Adler", text: "Guten Tag! Ich möchte einen Kaffee, bitte. Und für meine Frau einen Tee.", voice: "male", rate: "normal" },
+          { speaker: "Kellnerin", text: "Gern. Möchten Sie auch etwas essen?", voice: "female", rate: "normal" },
+          { speaker: "Frau Adler", text: "Ja, zwei Stück Apfelkuchen, bitte.", voice: "female2", rate: "normal" },
+          { speaker: "Herr Adler", text: "Entschuldigung! Wir möchten bezahlen, bitte.", voice: "male", rate: "normal" },
+          { speaker: "Kellnerin", text: "Zusammen oder getrennt?", voice: "female", rate: "normal" },
+          { speaker: "Herr Adler", text: "Zusammen, bitte.", voice: "male", rate: "normal" },
+          { speaker: "Kellnerin", text: "Das macht vierzehn Euro achtzig.", voice: "female", rate: "normal" },
+          { speaker: "Herr Adler", text: "Hier sind sechzehn Euro. Stimmt so.", voice: "male", rate: "normal" },
+          { speaker: "Kellnerin", text: "Vielen Dank!", voice: "female", rate: "normal" },
         ],
       },
       maxPlays: 2,
@@ -466,7 +466,7 @@ const L6 = [
       mcq("q5", en("What didn't they have time for?"), [opt("a", "das Stadtfest"), opt("b", "das Konzert"), opt("c", "die Party")], "b", {
         audio: { text: "Gestern war das Stadtfest. Es war super, aber wir hatten keine Zeit für das Konzert.", voice: "female" },
       }),
-      typed("q6", ["19. Mai", "am 19. Mai", "19 Mai", "am 19 Mai", "19.5.", "19.05.", "am 19.5.", "am 19.05.", "neunzehnten Mai", "am neunzehnten Mai", "der neunzehnte Mai", "neunzehnte Mai"], {
+      typed("q6", ["19. Mai", "am 19. Mai", "19 Mai", "am 19 Mai", "19.5.", "19.05.", "am 19.5.", "am 19.05.", "neunzehnten Mai", "am neunzehnten Mai", "der neunzehnte Mai", "neunzehnte Mai", "19.Mai"], {
         prompt: en("When is the concert? Write the date (for example: 5. Mai)."),
         audio: { text: "Das Konzert ist am neunzehnten Mai.", voice: "male" },
       }),

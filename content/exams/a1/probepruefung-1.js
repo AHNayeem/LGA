@@ -156,7 +156,7 @@ const HOEREN_3 = {
   instructions: en("Listen to the messages on the answering machine. You will hear each message twice. Choose the right answer: a, b or c."),
   itemAudioMaxPlays: 2,
   items: [
-    mcq("q1", en("When does Clara want to go swimming?"), [opt("a", "am Mittwoch"), opt("b", "am Donnerstag"), opt("c", "am Dienstag")], "b", {
+    mcq("q1", en("When does Clara now want to go swimming?"), [opt("a", "am Mittwoch"), opt("b", "am Donnerstag"), opt("c", "am Dienstag")], "b", {
       audio: say(
         "Hallo Mia, hier ist Clara. Wir wollen doch morgen, am Mittwoch, zusammen schwimmen gehen. Aber das Schwimmbad ist am Mittwoch geschlossen. Können wir am Donnerstag gehen, um vier Uhr? Ruf mich bitte zurück. Tschüs!",
         "female",
