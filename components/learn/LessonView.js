@@ -10,26 +10,9 @@ import ExercisePlayer from "@/components/exercises/ExercisePlayer";
 import AiContentNotice from "@/components/learn/AiContentNotice";
 import ContentImage from "@/components/learn/ContentImage";
 import LessonResult from "@/components/learn/LessonResult";
+import WordList from "@/components/learn/WordList";
 import { lessonBlocksOf } from "@/lib/learning/journey";
-
-function WordList({ cards, locale }) {
-  return (
-    <details className="rounded-xl border border-line bg-surface p-4">
-      <summary className="cursor-pointer font-medium">All words in this step ({cards.length})</summary>
-      <ul className="mt-3 divide-y divide-line text-sm">
-        {cards.map((c) => (
-          <li key={c.id} className="flex flex-wrap justify-between gap-2 py-2">
-            <span lang="de" className="font-medium">
-              {c.display}
-              {c.plural && <span className="font-normal text-ink-muted"> · {c.plural}</span>}
-            </span>
-            <LocalizedText text={c.meanings} prefer={locale} className="text-ink-muted" />
-          </li>
-        ))}
-      </ul>
-    </details>
-  );
-}
+import { grammarLinkOf } from "@/lib/learning/topics";
 
 // The lesson player, shared by the learner lesson page (signed in or guest) and the CMS
 // draft preview. `data` comes from getLearnerLesson or getLessonPreview (same shape).
@@ -101,6 +84,10 @@ export default function LessonView({
   const next = blocks[idx + 1];
   const nextHref = next ? hrefFor(next.key) : (resultHref ?? exitHref);
   const nextLabel = next ? `Next: ${blockLabel(next)}` : resultHref ? "See your lesson result" : exitLabel;
+  // The lesson's grammar rule, when this exercise practises it (one rule for "Why?", the
+  // topic numbers and the explanation report: lib/learning/topics.js).
+  const grammarBlock = current?.exercise ? grammarLinkOf(blocks, current.exercise.skill).block : null;
+  const rule = grammarBlock?.grammar ? { title: grammarBlock.grammar.title, summary: grammarBlock.grammar.summary, href: hrefFor(grammarBlock.key) } : null;
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8">
@@ -207,6 +194,7 @@ export default function LessonView({
                 mode={mode}
                 lessonBlocks={lessonBlocks}
                 returnLink={returnLink}
+                rule={rule}
               />
             )}
           </div>

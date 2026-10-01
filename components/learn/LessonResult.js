@@ -3,6 +3,7 @@ import LocalizedText from "@/components/ui/LocalizedText";
 import { SKILL_LABELS } from "@/lib/content/skills";
 import { localize } from "@/lib/i18n/locales";
 import SaveProgressNudge from "@/components/learn/SaveProgressNudge";
+import { grammarTopicHref, practiceHref } from "@/lib/learning/topics";
 
 const pct = (r) => `${Math.round((r ?? 0) * 100)}%`;
 
@@ -17,6 +18,8 @@ export default function LessonResult({ data, locale, hrefFor, moduleHref, mode, 
   const toPractise = results.filter((r) => r.graded && r.last && (r.last.ratio ?? 0) < 1);
   const firstOpen = data.blocks.find((b) => !b.done);
   const nextHref = data.nextLesson ? `${moduleHref}/${data.nextLesson.slug}` : moduleHref;
+  // This lesson's grammar topics in Practice (not in the CMS preview: drafts aren't there).
+  const topics = mode === "preview" ? [] : data.blocks.filter((b) => b.type === "grammar" && b.grammar?.slug);
 
   return (
     <section aria-labelledby="result-heading" className="space-y-6" data-testid="lesson-result">
@@ -90,6 +93,26 @@ export default function LessonResult({ data, locale, hrefFor, moduleHref, mode, 
                 </li>
               );
             })}
+          </ul>
+        </div>
+      )}
+
+      {topics.length > 0 && (
+        <div data-testid="practice-more">
+          <h3 className="font-semibold">Practise more</h3>
+          <ul className="mt-2 space-y-1 text-sm">
+            {topics.map((b) => (
+              <li key={b.key}>
+                <Link href={grammarTopicHref(data.level.code, b.grammar.slug)} className="font-medium text-brand-700 hover:underline">
+                  Grammar: <LocalizedText text={b.grammar.title} prefer="de" />
+                </Link>
+              </li>
+            ))}
+            <li>
+              <Link href={practiceHref(data.level.code)} className="text-ink-muted underline">
+                All grammar and word topics
+              </Link>
+            </li>
           </ul>
         </div>
       )}

@@ -2,6 +2,17 @@
 
 Newest first. Details for each phase are in the linked documents.
 
+## 2026-10-01: Practice by topic (German.net-inspired Phase B)
+See [PRACTICE.md](PRACTICE.md) and [GERMAN_NET_LEARNING_ANALYSIS.md](GERMAN_NET_LEARNING_ANALYSIS.md). No schema change, no content change, no seeding, no migration.
+- **Practice** (`/practice/<level>`): grammar topics by module with the learner's status, and word topics. Topic pages open the existing lesson exercises with `?from=grammar-<slug>` and the way back.
+- **Grammar-topic weak areas:** derived from lessons (a grammar exercise in a lesson with exactly one grammar step), with the Grammar skill's rules. Shown on the learner home, in Review and in Practice.
+- **"Why?" after a wrong answer:** the item's explanation, else the lesson's grammar rule when the exercise practises it, else only the correct answer.
+- **Try again keeps the right answers;** the retry is still graded as a whole on the server.
+- **Flashcards in both directions** (German → English, English → German), with the same self-rating and review schedule.
+- **Explanation report:** `/admin/explanations` and `bun run content:check -- --explanations`.
+- Practice counts as "Learn" in the navigation (no new tab). Review cards now carry `article` and `notes`.
+- **Tests:** unit `topics` (22), integration `practice` (9), E2E `practice` (4 × desktop + Pixel 7).
+
 ## 2026-10-01: Content readiness, learner QA, Goethe Prep depth, production checks
 See [CURRICULUM-A1.md](CURRICULUM-A1.md) §2c, [LEARNER.md](LEARNER.md) and [EXAMS.md](EXAMS.md). No content was approved, published or changed; no curriculum text was written.
 - **Curriculum readiness report** (`readinessService.checkLevelReadiness`): `bun run content:check -- --all` and `/admin/readiness` (read-only; not in the admin navigation yet).

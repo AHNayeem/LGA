@@ -1,5 +1,6 @@
 // Usage: bun run content:check [-- --module a1/hallo] [--source-type ai_generated]
 //        bun run content:check -- --all [--level a1] [--json]
+//        bun run content:check -- --explanations [--level a1] [--json] [--missing-only]
 //
 // Read-only pre-publish report against the configured database. Exits 1 on errors.
 //
@@ -9,12 +10,16 @@
 //            learners can open it and what blocks it (structural problems, missing audio,
 //            review state, open QA findings), the exams, and the "Continue" sequence.
 //            --json prints the full report instead of the table.
+// --explanations  per exercise: how many scored items have an explanation, and whether a
+//            wrong answer falls back to the lesson's grammar rule (lib/content/explanationReport.js).
+//            Informational: never exits 1. --missing-only lists only exercises with no fallback.
 import { closeClient } from "@/lib/db/client";
 import { getEnv } from "@/lib/config/env";
 import { ROLES } from "@/lib/auth/roles";
 import { moduleRepository } from "@/lib/repositories/contentRepository";
 import { checkModuleReadiness } from "@/lib/services/publishCheckService";
 import { checkLevelReadiness } from "@/lib/services/readinessService";
+import { getExplanationReport } from "@/lib/services/explanationReportService";
 
 const args = process.argv.slice(2);
 const option = (name, fallback) => {
@@ -60,9 +65,34 @@ function printLevel(r) {
   console.log(r.ok ? "\nNo blocking structural problems." : `\n${s.errors} blocking problem(s).`);
 }
 
+const FALLBACK_REASON = {
+  linked: "grammar rule",
+  not_grammar_skill: "not a grammar exercise",
+  no_grammar_topic: "lesson has no grammar topic",
+  several_grammar_topics: "lesson has several grammar topics",
+};
+
+function printExplanations(r, { missingOnly }) {
+  const s = r.summary;
+  console.log(`Level ${r.level.code}: ${s.exercises} exercises · ${s.explainedItems}/${s.gradedItems} scored items explained`);
+  console.log(`  complete ${s.complete} · grammar fallback ${s.fallback} · missing ${s.missing} · not scored ${s.ungraded}
+`);
+  for (const row of r.rows) {
+    if (row.status === "ungraded" || row.status === "complete") continue;
+    if (missingOnly && row.status !== "missing") continue;
+    const where = `M${row.module.order} ${row.lesson.slug} · ${row.blockKey}`;
+    const fallback = row.fallback.topic ? `→ ${row.fallback.topic.slug}` : `(${FALLBACK_REASON[row.fallback.reason] ?? row.fallback.reason})`;
+    console.log(`${pad(row.status.toUpperCase(), 9)}${pad(where, 52)}${pad(row.exercise.slug, 34)}${pad(row.exercise.skill, 11)}${pad(`${row.explained}/${row.gradedItems}`, 7)}${pad(row.itemTypes.join(","), 22)}${fallback}`);
+  }
+}
+
 try {
   console.log(`Database: ${getEnv().MONGODB_DB}`);
-  if (args.includes("--all")) {
+  if (args.includes("--explanations")) {
+    const report = await getExplanationReport(SYSTEM, option("level", "a1"));
+    if (args.includes("--json")) console.log(JSON.stringify(report, null, 2));
+    else printExplanations(report, { missingOnly: args.includes("--missing-only") });
+  } else if (args.includes("--all")) {
     const report = await checkLevelReadiness(SYSTEM, option("level", "a1"));
     if (args.includes("--json")) console.log(JSON.stringify(report, null, 2));
     else printLevel(report);

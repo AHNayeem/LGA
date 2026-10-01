@@ -4,6 +4,8 @@ import { SKILL_LABELS } from "@/lib/content/skills";
 import { localize } from "@/lib/i18n/locales";
 import { goetheHref } from "@/lib/learning/journey";
 import { GOETHE_PART_TITLES } from "@/lib/learning/goethe";
+import { grammarTopicHref } from "@/lib/learning/topics";
+import { topicStatusText } from "@/components/practice/TopicStatus";
 
 // Review: words due (the `deck` slot: flashcards for signed-in learners, GuestReviewDeck
 // for guests) and exercises to practise again. A mistake is an exercise whose latest
@@ -11,6 +13,7 @@ import { GOETHE_PART_TITLES } from "@/lib/learning/goethe";
 // lesson, and disappears once it is fully right.
 export default function ReviewView({ view, deck, locale = "en" }) {
   const { due, mistakes, weakSkills } = view;
+  const weakTopics = view.weakTopics ?? [];
   const code = view.level.code;
   const nothing = due.count === 0 && mistakes.count === 0;
 
@@ -64,6 +67,22 @@ export default function ReviewView({ view, deck, locale = "en" }) {
           </div>
         )}
 
+        {weakTopics.length > 0 && (
+          <div className="mt-3 rounded-xl border border-warning-700/20 bg-warning-50 p-4 text-sm" data-testid="review-weak-topics">
+            <p className="font-medium text-warning-700">Grammar topics that need practice:</p>
+            <ul className="mt-1 space-y-1">
+              {weakTopics.map((t) => (
+                <li key={t.id}>
+                  <Link href={t.href} className="font-medium text-brand-700 hover:underline">
+                    <LocalizedText text={t.title} prefer="de" />
+                  </Link>{" "}
+                  <span className="text-ink-muted">· {topicStatusText(t)}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {mistakes.count === 0 ? (
           <p className="mt-3 text-sm text-ink-muted">No mistakes to practise. Exercises you don&apos;t get fully right show up here.</p>
         ) : (
@@ -74,16 +93,30 @@ export default function ReviewView({ view, deck, locale = "en" }) {
                   Modul {group.module.order} · <LocalizedText text={group.module.title} prefer="de" />
                 </p>
                 <LocalizedText as="h3" text={group.lesson.title} prefer="de" className="font-semibold" />
-                {group.lesson.grammar.length > 0 && (
+                {group.lesson.grammarTopics?.length > 0 ? (
                   <p className="text-sm text-ink-muted">
                     Grammar in this lesson:{" "}
-                    {group.lesson.grammar.map((g, i) => (
-                      <span key={i}>
+                    {group.lesson.grammarTopics.map((g, i) => (
+                      <span key={g.id}>
                         {i > 0 && ", "}
-                        <LocalizedText text={g} prefer="de" />
+                        <Link href={grammarTopicHref(code, g.slug)} className="underline hover:text-ink">
+                          <LocalizedText text={g.title} prefer="de" />
+                        </Link>
                       </span>
                     ))}
                   </p>
+                ) : (
+                  group.lesson.grammar.length > 0 && (
+                    <p className="text-sm text-ink-muted">
+                      Grammar in this lesson:{" "}
+                      {group.lesson.grammar.map((g, i) => (
+                        <span key={i}>
+                          {i > 0 && ", "}
+                          <LocalizedText text={g} prefer="de" />
+                        </span>
+                      ))}
+                    </p>
+                  )
                 )}
                 <ul className="mt-3 divide-y divide-line">
                   {group.items.map((m) => (

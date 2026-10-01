@@ -2,6 +2,8 @@
 
 Status: implemented 2026-09-29. An authenticated ADMIN can create and edit the core curriculum (levels, modules, lessons, vocabulary, grammar topics, exercises and lesson blocks) in `/admin`, without changing code or seed files. Learners read the same MongoDB documents as before; nothing in the learner model changed.
 
+**Explanation coverage** (`/admin/explanations`, `bun run content:check -- --explanations`): a read-only report of which exercises explain their answers and which fall back to the lesson's grammar rule; see [PRACTICE.md](PRACTICE.md#explanation-report-content-qa). Adding an explanation is an ordinary exercise edit (and so goes back to review).
+
 Curriculum media (upload, attach and preview recorded audio, TTS status) was added in [CMS Phase 2](#cms-phase-2-curriculum-media-and-audio), the draft learner preview in [CMS Phase 3](#cms-phase-3-draft-learner-preview), and curriculum images in [CMS Phase 5](#cms-phase-5-curriculum-images), below. Exam authoring (`/admin/exams`, editor, bulk review and preview) is described in [EXAMS.md](EXAMS.md#cms).
 
 ## What it builds on

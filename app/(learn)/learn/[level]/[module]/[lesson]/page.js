@@ -4,20 +4,14 @@ import { getLearnerLesson } from "@/lib/services/curriculumService";
 import { orNotFound } from "@/lib/pages";
 import LessonView from "@/components/learn/LessonView";
 import GuestLesson from "@/components/learn/GuestLesson";
-import { goetheHref } from "@/lib/learning/journey";
-import { GOETHE_PART_TITLES } from "@/lib/learning/goethe";
+import { returnLinkFor } from "@/lib/learning/returnLink";
 
 export const metadata = { title: "Lesson" };
 
 const UNAVAILABLE = "This lesson is being updated and is not available right now. Please try again later.";
 
-// ?from=goethe-<part>: opened from Goethe Prep, so the lesson offers the way back. Only the
-// known parts are accepted; anything else is ignored.
-function returnLinkFor(from, level) {
-  const key = typeof from === "string" && from.startsWith("goethe-") ? from.slice(7) : null;
-  if (!key || !Object.hasOwn(GOETHE_PART_TITLES, key)) return null;
-  return { href: goetheHref(level, key), label: `Back to ${GOETHE_PART_TITLES[key]} practice` };
-}
+// ?from=…: opened from Goethe Prep or Practice, so the lesson offers the way back
+// (lib/learning/returnLink.js). Unknown values are ignored.
 
 // Signed-in learners and guests use the same lesson view. A signed-in learner's progress
 // comes from the server; a guest's from their browser (GuestLesson).

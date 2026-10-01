@@ -26,7 +26,9 @@ Status: implemented 2026-09-30; QA, exam drafts and Goethe Prep depth added 2026
 /exams/a1/<exam>   practice exam → result per section → "Practise this part" → /goethe/a1/<part>
 ```
 
-Every screen ends with a next step; there is no dead end. Navigation: **Learn · Review · Goethe Prep · Account** in the header on tablets and desktops, and as a bottom tab bar on phones. The tab bar is hidden inside a lesson and a running exam (focus mode), where those pages have their own sticky action bar.
+**Practice** (`/practice/<level>`, see [PRACTICE.md](PRACTICE.md)): grammar topics and word topics outside their lessons, reached from the learner home, Review and the lesson result. Exercises still open as their lesson step (`?from=grammar-<slug>` / `practice` adds the way back).
+
+Every screen ends with a next step; there is no dead end. Navigation: **Learn · Review · Goethe Prep · Account** (Practice counts as Learn) in the header on tablets and desktops, and as a bottom tab bar on phones. The tab bar is hidden inside a lesson and a running exam (focus mode), where those pages have their own sticky action bar.
 
 ## Guests and signed-in learners
 
@@ -103,6 +105,8 @@ Every number shown to learners is one of these. They are the same on every page 
 | **Skill: progress towards the target (bar)** | latest score of every graded exercise of that skill in the level ÷ all its points, **unattempted exercises count as 0**, compared with the LGA target (level mastery rules: vocabulary 80%, grammar 75%, reading and listening 70%, writing 60%). "Target reached" when met. Module pages use the same rule with the module's rules | `scopeMastery` |
 | **Weak skill** ("Below the LGA target so far") | a skill whose **% right** is below its target. Exercises not done yet never make a skill weak. Always shown with the number of exercises it rests on ("in the one exercise you did"), so a single attempt isn't presented as a settled weakness | `weakSkills` |
 | **Speaking** | never scored (no pronunciation assessment). Shown as "N of M practised · self-rated" | `levelSkills.ungraded` |
+| **Grammar topic: % right / status / weak topic** | the Grammar skill's rules on the exercises that practise one topic (derived from lessons: a grammar exercise in a lesson with exactly one grammar step). Weak = % right below the module's Grammar target, attempted exercises only, shown with how many it rests on. Full definitions: [PRACTICE.md](PRACTICE.md#topic-numbers) | `grammarTopics`, `weakGrammarTopics` |
+| **Word topic** | the live lessons' words with that `topics` slug: count and how many are due | `wordTopics` |
 | **Mistake** ("Practise again") | a graded exercise whose **latest** attempt scored below 100%. Gone once it is fully right. Links to the exercise step | `mistakes` |
 | **Words due** | words from the level's lessons whose review time has come (Leitner boxes 1–5: 10 min, 1, 3, 7, 21 days). Self-rated, never part of any score | `dueVocabulary` |
 | **Lesson result points** | sum of the latest attempt's points of each exercise in the lesson | `LessonResult` |
@@ -161,6 +165,7 @@ There is **no placement test**: the curriculum has no reliable diagnostic, and t
 | `/dashboard` | everyone | learner home ("Learn") |
 | `/learn/<level>`, `/<module>`, `/<lesson>?block=…`, `?view=result` | everyone | level, module, lesson and lesson result |
 | `/review` | everyone | words due and mistakes |
+| `/practice` → `/practice/<level>`, `/grammar/<slug>`, `/words/<topic>` | everyone | Practice by topic ([PRACTICE.md](PRACTICE.md)) |
 | `/goethe` → `/goethe/<level>`, `/goethe/<level>/<part>` | everyone | Goethe Prep |
 | `/exams/<level>/<exam>` (`?take=1` for guests) | everyone | practice exam overview; guests take it in the browser |
 | `/exams/attempts/<id>` | signed in | stored attempt and result |

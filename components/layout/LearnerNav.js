@@ -4,7 +4,9 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 
 export const LEARNER_NAV = [
-  { href: "/dashboard", label: "Learn", match: ["/dashboard", "/learn", "/start"] },
+  // Practice is reached from the learner home, so it belongs to "Learn" until it earns a
+  // tab of its own (adding { href: "/practice", label: "Practice", match: ["/practice"] }).
+  { href: "/dashboard", label: "Learn", match: ["/dashboard", "/learn", "/start", "/practice"] },
   { href: "/review", label: "Review", match: ["/review"] },
   { href: "/goethe", label: "Goethe Prep", match: ["/goethe", "/exams"] },
   { href: "/account", label: "Account", match: ["/account"] },

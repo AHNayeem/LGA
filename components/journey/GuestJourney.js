@@ -8,6 +8,9 @@ import ModuleOverview from "@/components/journey/ModuleOverview";
 import ReviewView from "@/components/journey/ReviewView";
 import GuestReviewDeck from "@/components/journey/GuestReviewDeck";
 import { GoetheOverview, GoetheSection } from "@/components/journey/GoetheViews";
+import { grammarTopicView, practiceView } from "@/lib/learning/topics";
+import PracticeOverview from "@/components/practice/PracticeOverview";
+import GrammarTopicPractice from "@/components/practice/GrammarTopicPractice";
 
 // Guests: the page sends the level structure (published content, no learner data) and
 // this component computes the page's view in the browser from the guest's own state,
@@ -21,9 +24,13 @@ const PAGES = {
   review: (s, st) => ({ view: reviewView(s, st), Component: ReviewView }),
   goethe: (s, st) => ({ view: goetheView(s, st), Component: GoetheOverview }),
   goetheSection: (s, st, arg) => ({ view: goetheSectionView(s, st, arg), Component: GoetheSection }),
+  practice: (s, st) => ({ view: practiceView(s, st), Component: PracticeOverview }),
+  grammarTopic: (s, st, arg) => ({ view: grammarTopicView(s, st, arg), Component: GrammarTopicPractice }),
 };
 
-export default function GuestJourney({ page, structure, arg = null, locale = "en" }) {
+// `props`: extra, state-independent props for the page component (e.g. a grammar topic's
+// explanation), passed through unchanged.
+export default function GuestJourney({ page, structure, arg = null, locale = "en", props = {} }) {
   const state = useGuestState();
   if (!state) {
     return (
@@ -35,5 +42,5 @@ export default function GuestJourney({ page, structure, arg = null, locale = "en
   const { view, Component } = PAGES[page](structure, state, arg);
   if (!view) return null;
   const extra = page === "review" ? { deck: <GuestReviewDeck dueIds={view.due.ids} locale={locale} /> } : {};
-  return <Component view={view} locale={locale} guest {...extra} />;
+  return <Component view={view} locale={locale} guest {...props} {...extra} />;
 }

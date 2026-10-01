@@ -8,6 +8,8 @@ import { SKILL_LABELS } from "@/lib/content/skills";
 import { localize } from "@/lib/i18n/locales";
 import { GOAL_OPTIONS } from "@/lib/learning/profile";
 import { moduleHref } from "@/lib/learning/journey";
+import { practiceHref } from "@/lib/learning/topics";
+import { topicResultText } from "@/components/practice/TopicStatus";
 
 const pct = (r) => `${Math.round((r ?? 0) * 100)}%`;
 const btn = "inline-flex h-11 items-center rounded-lg bg-brand-600 px-5 font-medium text-white hover:bg-brand-700";
@@ -55,6 +57,52 @@ function PlanItem({ item, locale }) {
         </span>
       </Link>
     </li>
+  );
+}
+
+// Practice on the learner home: weak grammar topics when there are any (only from
+// attempted exercises), and the two ways in. Kept small: the plan above stays the first thing.
+function PracticeCard({ practice, code }) {
+  const base = practiceHref(code);
+  return (
+    <section aria-labelledby="practice-heading" data-testid="practice-card">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 id="practice-heading" className="text-lg font-semibold">
+          Practice
+        </h2>
+        <Link href={base} className="text-sm font-medium text-brand-700 hover:underline">
+          All topics
+        </Link>
+      </div>
+      {practice.weakTopics.length > 0 && (
+        <ul className="mt-3 space-y-2" data-testid="dashboard-weak-topics">
+          {practice.weakTopics.map((t) => (
+            <li key={t.id}>
+              <Link href={t.href} className="flex items-center gap-3 rounded-xl border border-warning-700/20 bg-warning-50 p-4 hover:border-warning-700/40">
+                <span className="min-w-0 flex-1">
+                  <span className="block text-xs font-medium uppercase tracking-wide text-warning-700">Needs practice · Grammar</span>
+                  <LocalizedText text={t.title} prefer="de" className="block font-medium" />
+                  <span className="block text-sm text-ink-muted">{topicResultText(t)}</span>
+                </span>
+                <span aria-hidden="true" className="text-ink-muted">
+                  →
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <Link href={`${base}#grammar`} className="rounded-xl border border-line bg-surface p-4 hover:border-brand-600/40">
+          <span className="block font-medium">Grammar</span>
+          <span className="block text-sm text-ink-muted">{practice.grammarCount} topics</span>
+        </Link>
+        <Link href={`${base}#words`} className="rounded-xl border border-line bg-surface p-4 hover:border-brand-600/40">
+          <span className="block font-medium">Words</span>
+          <span className="block text-sm text-ink-muted">by topic</span>
+        </Link>
+      </div>
+    </section>
   );
 }
 
@@ -141,6 +189,8 @@ export default function HomeView({ view, guest = false, name = null, locale = "e
               </ol>
             </section>
           )}
+
+          {view.practice?.grammarCount > 0 && <PracticeCard practice={view.practice} code={code} />}
 
         </div>
 
