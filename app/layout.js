@@ -1,5 +1,8 @@
 import { Geist, Geist_Mono, Noto_Sans_Bengali } from "next/font/google";
+import { Suspense } from "react";
 import SiteHeader from "@/components/layout/SiteHeader";
+import { BottomTabBar } from "@/components/layout/LearnerNav";
+import HideInAdmin from "@/components/layout/HideInAdmin";
 import "./globals.css";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin", "latin-ext"] });
@@ -9,7 +12,7 @@ const bengali = Noto_Sans_Bengali({ variable: "--font-bengali", subsets: ["benga
 
 export const metadata = {
   title: { default: "LGA – Deutsch lernen", template: "%s · LGA" },
-  description: "Structured German learning and Goethe-aligned A1 exam preparation.",
+  description: "Learn German step by step and prepare for the Goethe exam. Start right away, no account needed.",
 };
 
 export const viewport = {
@@ -27,10 +30,16 @@ export default function RootLayout({ children }) {
         >
           Skip to content
         </a>
-        <SiteHeader />
+        <HideInAdmin>
+          <SiteHeader />
+        </HideInAdmin>
         <main id="main" className="flex flex-1 flex-col">
           {children}
         </main>
+        {/* Reads the URL (search params), so it renders on the client only. */}
+        <Suspense fallback={null}>
+          <BottomTabBar />
+        </Suspense>
       </body>
     </html>
   );

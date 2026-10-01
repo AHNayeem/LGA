@@ -436,7 +436,7 @@ Results on 2026-09-29:
 - **Formats:** no SVG (on purpose), AVIF or HEIC.
 - **Learner access checks the item, not the whole chain** (as for recordings): an image is readable while the word, exercise or lesson that attaches it is approved and published, even if the lesson around a word isn't. The lesson itself still doesn't show, and ids are unguessable and never listed to learners.
 - **The library's default alt text** is plain text (English prefill). Attachments carry their own localised alt text.
-- **`content:check`** reports audio but not images. Publishing itself refuses unusable images.
+- **`content:check`** (per module) reports audio but not images; `content:check -- --all` also reports missing or archived images (2026-10-01). Publishing itself refuses unusable images.
 - **Removing an image from the library page** is not offered (unlike audio): it's done in the item's editor, linked from *Used by*.
 
 # CMS: bulk vocabulary import

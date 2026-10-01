@@ -1,9 +1,10 @@
-// Usage: bun run seed [-- --update]   (reads MONGODB_URI from .env.local)
+// Usage: bun run seed [-- --update | --update-references]   (reads MONGODB_URI from .env.local)
 //
 // Inserts missing levels, reference metadata and curriculum modules, and registers the
 // generated audio listed in content/audio/manifest.json. Everything new starts as
 // draft/unpublished. With --update, changed curriculum items are updated AND sent back
-// to draft for re-review.
+// to draft for re-review. --update-references only refreshes reference metadata (titles,
+// notes, the Goethe part structure), which needs no review.
 import { ensureIndexes } from "@/lib/db/indexes";
 import { closeClient } from "@/lib/db/client";
 import { seedCurriculumModule, seedExam, seedLevels, seedReferences } from "@/lib/services/seedService";
@@ -15,12 +16,15 @@ import { CURRICULUM } from "@/content/curriculum/index.js";
 import { EXAMS } from "@/content/exams/index.js";
 
 const update = process.argv.includes("--update");
+// Refreshes reference metadata only (e.g. the Goethe part descriptions); curriculum content
+// is left alone unless --update is given too.
+const updateReferences = update || process.argv.includes("--update-references");
 
 try {
   await ensureIndexes();
   const levels = await seedLevels(LEVELS);
-  const refs = await seedReferences(REFERENCES);
-  console.log(`Indexes ensured. Levels inserted: ${levels.inserted}/${levels.total}. References inserted: ${refs.inserted}.`);
+  const refs = await seedReferences(REFERENCES, { update: updateReferences });
+  console.log(`Indexes ensured. Levels inserted: ${levels.inserted}/${levels.total}. References inserted: ${refs.inserted}, updated: ${refs.updated}.`);
 
   for (const def of CURRICULUM) {
     const r = await seedCurriculumModule(def, { update });

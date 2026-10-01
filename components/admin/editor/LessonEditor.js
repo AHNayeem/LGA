@@ -61,7 +61,7 @@ function BlockEditor({ block, index, count, onChange, onMove, onRemove, related,
   const isExercise = EXERCISE_BLOCK_TYPES.includes(block.type);
 
   return (
-    <div className="rounded-xl border border-line bg-surface p-4" data-testid="lesson-block">
+    <div className="rounded-lg border border-line bg-surface p-4 shadow-xs" data-testid="lesson-block">
       <div className="flex flex-wrap items-end gap-2">
         <h3 className="mr-auto text-sm font-semibold">
           Block {index + 1} · {BLOCK_LABELS[block.type]}
@@ -227,7 +227,7 @@ export default function LessonEditor({ item, modules, references, related: initi
             Learners go through the blocks in this order. A lesson can only be published when every word, grammar topic and exercise it uses is published.
           </p>
         </div>
-        {blocks.length === 0 && <p className="rounded-xl border border-dashed border-line bg-surface p-4 text-sm text-ink-muted">No blocks yet. Add the first one below.</p>}
+        {blocks.length === 0 && <p className="rounded-lg border border-dashed border-line-strong bg-surface p-4 text-sm text-ink-muted">No blocks yet. Add the first one below.</p>}
         {blocks.map((b, i) => (
           <BlockEditor
             key={b.uid}
@@ -243,7 +243,7 @@ export default function LessonEditor({ item, modules, references, related: initi
             onRemove={(idx) => set({ blocks: removeAt(blocks, idx) })}
           />
         ))}
-        <div className="flex flex-wrap items-end gap-2 rounded-xl border border-dashed border-line bg-surface p-3">
+        <div className="flex flex-wrap items-end gap-2 rounded-lg border border-dashed border-line-strong bg-surface p-3">
           <Select label="New block type" value={newType} onChange={setNewType} options={LESSON_BLOCK_TYPES.map((t) => ({ value: t, label: BLOCK_LABELS[t] }))} />
           <AddButton onClick={addBlock} disabled={blocks.length >= 30}>
             + Add block

@@ -6,6 +6,7 @@ import { saveContentAction } from "@/app/actions/content";
 import { editHref } from "@/lib/content/adminSections";
 import { ErrorsContext } from "@/components/admin/editor/fields";
 import Alert from "@/components/ui/Alert";
+import { buttonClass } from "@/components/ui/button";
 
 // Wraps an editor form: sends the payload to the server, shows field errors next to the
 // inputs (and all of them in a summary), and handles version conflicts. The server
@@ -51,11 +52,11 @@ export default function EditorShell({ kind, item, buildPayload, children, submit
 
         {children}
 
-        <div className="sticky bottom-0 z-10 -mx-4 flex flex-wrap items-center gap-3 border-t border-line bg-surface/95 px-4 py-3 backdrop-blur">
+        <div className="sticky bottom-0 z-10 -mx-4 flex flex-wrap items-center gap-3 border-t border-line bg-surface/95 px-4 py-2.5 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
           <button
             type="submit"
             disabled={pending}
-            className="inline-flex h-10 items-center rounded-lg bg-brand-600 px-5 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+            className={buttonClass({ variant: "primary" })}
           >
             {pending ? "Saving…" : (submitLabel ?? (isNew ? "Create draft" : "Save changes"))}
           </button>
@@ -68,7 +69,7 @@ export default function EditorShell({ kind, item, buildPayload, children, submit
         </div>
 
         {result && !result.ok && (
-          <div role="alert" className="rounded-lg border border-danger-700/20 bg-danger-50 px-4 py-3 text-sm text-danger-700">
+          <div role="alert" className="rounded-md border border-danger-700/20 bg-danger-50 px-3 py-2.5 text-[13px] text-danger-700">
             <p className="font-medium">{result.message}</p>
             {errorEntries.length > 0 && (
               <ul className="mt-2 list-disc space-y-0.5 pl-5 text-xs">
@@ -83,7 +84,7 @@ export default function EditorShell({ kind, item, buildPayload, children, submit
               <button
                 type="button"
                 onClick={() => window.location.reload()}
-                className="mt-2 inline-flex h-8 items-center rounded-md border border-danger-700/40 bg-surface px-3 text-xs font-medium"
+                className={buttonClass({ variant: "danger", size: "sm", className: "mt-2" })}
               >
                 Reload the latest version (discards your changes)
               </button>

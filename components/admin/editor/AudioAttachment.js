@@ -122,7 +122,7 @@ export default function AudioAttachment({ mediaId, onChange, status, media, onKn
   const source = mediaId && info?.usable !== false ? "native" : ttsReady ? "tts" : "missing";
 
   return (
-    <div className="rounded-lg border border-dashed border-line p-3" data-testid="audio-attachment">
+    <div className="rounded-lg border border-dashed border-line-strong p-3" data-testid="audio-attachment">
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs font-medium">{label}</span>
         <AudioSourceBadge source={source} />

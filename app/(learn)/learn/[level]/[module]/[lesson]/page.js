@@ -1,26 +1,59 @@
 import { redirect } from "next/navigation";
-import { requireUserPage } from "@/lib/auth/dal";
+import { getCurrentUser } from "@/lib/auth/dal";
 import { getLearnerLesson } from "@/lib/services/curriculumService";
 import { orNotFound } from "@/lib/pages";
 import LessonView from "@/components/learn/LessonView";
+import GuestLesson from "@/components/learn/GuestLesson";
+import { goetheHref } from "@/lib/learning/journey";
+import { GOETHE_PART_TITLES } from "@/lib/learning/goethe";
 
 export const metadata = { title: "Lesson" };
 
+const UNAVAILABLE = "This lesson is being updated and is not available right now. Please try again later.";
+
+// ?from=goethe-<part>: opened from Goethe Prep, so the lesson offers the way back. Only the
+// known parts are accepted; anything else is ignored.
+function returnLinkFor(from, level) {
+  const key = typeof from === "string" && from.startsWith("goethe-") ? from.slice(7) : null;
+  if (!key || !Object.hasOwn(GOETHE_PART_TITLES, key)) return null;
+  return { href: goetheHref(level, key), label: `Back to ${GOETHE_PART_TITLES[key]} practice` };
+}
+
+// Signed-in learners and guests use the same lesson view. A signed-in learner's progress
+// comes from the server; a guest's from their browser (GuestLesson).
 export default async function LessonPage({ params, searchParams }) {
   const { level, module: moduleSlug, lesson: lessonSlug } = await params;
-  const { block: blockParam } = await searchParams;
+  const { block: blockParam, view: viewParam, from } = await searchParams;
+  const returnLink = returnLinkFor(from, level);
   const base = `/learn/${level}/${moduleSlug}/${lessonSlug}`;
   const moduleHref = `/learn/${level}/${moduleSlug}`;
-  const user = await requireUserPage(base);
-  const locale = user.uiLanguage ?? "en";
+  const user = await getCurrentUser();
+  const locale = user?.uiLanguage ?? "en";
   const data = await orNotFound(getLearnerLesson(user, { level, module: moduleSlug, lesson: lessonSlug }));
+  const showResult = viewParam === "result";
 
-  if (data.available) {
+  if (!user) {
+    return (
+      <GuestLesson
+        data={data}
+        locale={locale}
+        base={base}
+        levelHref={`/learn/${level}`}
+        moduleHref={moduleHref}
+        blockParam={typeof blockParam === "string" ? blockParam : null}
+        showResult={showResult}
+        unavailableMessage={UNAVAILABLE}
+        returnLink={returnLink}
+      />
+    );
+  }
+
+  if (data.available && !showResult) {
     const { blocks } = data;
     const current = blocks.find((b) => b.key === blockParam) ?? blocks.find((b) => !b.done) ?? blocks[0];
     // Always address the step explicitly, so refreshing after a submission keeps the learner
     // (and their feedback) on the same step instead of jumping to the next unfinished one.
-    if (current.key !== blockParam) redirect(`${base}?block=${current.key}`);
+    if (current.key !== blockParam) redirect(`${base}?block=${current.key}${returnLink ? `&from=${from}` : ""}`);
   }
 
   return (
@@ -33,7 +66,10 @@ export default async function LessonPage({ params, searchParams }) {
       moduleHref={moduleHref}
       exitHref={moduleHref}
       exitLabel="Back to module"
-      unavailableMessage="This lesson is being updated and is not available right now. Please try again later."
+      unavailableMessage={UNAVAILABLE}
+      resultHref={`${base}?view=result`}
+      showResult={showResult}
+      returnLink={returnLink}
     />
   );
 }

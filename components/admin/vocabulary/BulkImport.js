@@ -26,10 +26,10 @@ const STATUS = {
   error: { label: "Error", icon: "✕", className: "text-danger-700" },
 };
 
-const button = "inline-flex h-9 items-center rounded-lg px-4 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-60";
+const button = "inline-flex h-8 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-3 text-[13px] font-medium shadow-xs transition-colors disabled:cursor-not-allowed disabled:opacity-60";
 const primary = `${button} bg-brand-600 text-white hover:bg-brand-700`;
 const secondary = `${button} border border-line bg-surface hover:bg-canvas`;
-const input = "h-9 rounded-md border border-line bg-surface px-2 text-sm focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-100";
+const input = "h-8 rounded-md border border-line bg-surface px-2 text-[13px] shadow-xs focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-100";
 
 function download(name, text) {
   const url = URL.createObjectURL(new Blob([text], { type: "text/csv;charset=utf-8" }));
@@ -227,7 +227,7 @@ export default function BulkImport({ levels }) {
 
   return (
     <div className="mt-6 space-y-6">
-      <section aria-labelledby={`${ids.source}-h`} className="space-y-4 rounded-xl border border-line bg-surface p-4">
+      <section aria-labelledby={`${ids.source}-h`} className="space-y-4 rounded-lg border border-line bg-surface p-4 shadow-xs">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 id={`${ids.source}-h`} className="font-semibold">
@@ -253,7 +253,7 @@ export default function BulkImport({ levels }) {
             accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values,text/plain"
             onChange={onFile}
             disabled={phase === "importing"}
-            className="text-sm file:mr-3 file:h-9 file:rounded-lg file:border file:border-line file:bg-surface file:px-3 file:text-sm"
+            className="text-sm file:mr-3 file:h-8 file:rounded-md file:border file:border-line file:bg-surface file:px-3 file:text-sm"
           />
         </div>
         <div className="flex flex-col gap-1">
@@ -280,7 +280,7 @@ export default function BulkImport({ levels }) {
         </div>
       </section>
 
-      <section aria-labelledby={`${ids.level}-h`} className="space-y-3 rounded-xl border border-line bg-surface p-4">
+      <section aria-labelledby={`${ids.level}-h`} className="space-y-3 rounded-lg border border-line bg-surface p-4 shadow-xs">
         <h2 id={`${ids.level}-h`} className="font-semibold">
           2. Defaults for empty cells
         </h2>
@@ -387,7 +387,7 @@ export default function BulkImport({ levels }) {
             </button>
           )}
 
-          <div className="sticky bottom-0 z-10 -mx-4 flex flex-wrap items-center gap-3 border-t border-line bg-surface/95 px-4 py-3 backdrop-blur">
+          <div className="sticky bottom-0 z-10 -mx-4 flex flex-wrap items-center gap-3 border-t border-line bg-surface/95 px-4 py-2.5 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
             <button type="button" className={primary} onClick={runImport} disabled={!canImport} aria-describedby={`${ids.filter}-import-hint`}>
               {phase === "importing" ? "Importing…" : `Import ${plural(counts.all, "word")} as drafts`}
             </button>
@@ -414,9 +414,9 @@ export default function BulkImport({ levels }) {
 }
 
 function PreviewTable({ rows, removed, onToggle, disabled }) {
-  if (rows.length === 0) return <p className="rounded-xl border border-dashed border-line bg-surface p-4 text-sm text-ink-muted">No rows to show.</p>;
+  if (rows.length === 0) return <p className="rounded-lg border border-dashed border-line-strong bg-surface p-4 text-sm text-ink-muted">No rows to show.</p>;
   return (
-    <div className="max-h-[32rem] overflow-auto rounded-xl border border-line bg-surface">
+    <div className="max-h-[32rem] overflow-auto rounded-lg border border-line bg-surface">
       <table className="w-full min-w-[900px] text-left text-sm">
         <caption className="sr-only">Import preview. Row numbers are the rows of your spreadsheet.</caption>
         <thead className="sticky top-0 border-b border-line bg-surface text-xs uppercase text-ink-muted">
@@ -511,7 +511,7 @@ function Summary({ result, onReset }) {
           {plural(result.imported.length, "word")} imported as drafts. They are invisible to learners until they are reviewed, approved and published.
         </p>
       </Alert>
-      <dl className="grid max-w-xl grid-cols-[1fr_auto] gap-x-6 gap-y-1 rounded-xl border border-line bg-surface p-4 text-sm">
+      <dl className="grid max-w-xl grid-cols-[1fr_auto] gap-x-6 gap-y-1 rounded-lg border border-line bg-surface p-4 shadow-xs text-sm">
         {stats.map(([label, n]) => (
           <div key={label} className="contents">
             <dt className="text-ink-muted">{label}</dt>

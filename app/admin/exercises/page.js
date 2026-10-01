@@ -6,6 +6,7 @@ import { SKILLS, SKILL_LABELS } from "@/lib/content/skills";
 import { pickText } from "@/lib/i18n/locales";
 import { ButtonLink, ContentTable, FilterBar, LEVEL_FILTER, PageHeader, Pagination, PUBLISH_FILTER, REVIEW_FILTER, StatusCell } from "@/components/admin/list";
 import LifecycleControls from "@/components/admin/LifecycleControls";
+import BulkActionBar from "@/components/admin/BulkSelection";
 import { AudioSourceBadge } from "@/components/admin/media/labels";
 
 export const metadata = { title: "Exercises" };
@@ -20,7 +21,7 @@ export default async function ExercisesPage({ searchParams }) {
         crumbs={[{ href: "/admin", label: "Admin" }]}
         title="Exercises"
         description="Question sets with answer keys. Lessons link to them from reading, listening, speaking, writing, practice and test blocks."
-        actions={<ButtonLink href={newHref("exercises", Object.keys(defaults).length ? defaults : undefined)}>New exercise</ButtonLink>}
+        actions={<ButtonLink icon="plus" href={newHref("exercises", Object.keys(defaults).length ? defaults : undefined)}>New exercise</ButtonLink>}
       />
       <FilterBar
         action="/admin/exercises"
@@ -33,15 +34,17 @@ export default async function ExercisesPage({ searchParams }) {
           { name: "publish", label: "Visibility", type: "select", options: PUBLISH_FILTER },
         ]}
       />
+      <BulkActionBar formId="bulk-exercises" kind="exercises" />
       <ContentTable
         items={list.items}
+        select={{ formId: "bulk-exercises", label: (e) => e.slug }}
         empty="No exercises match these filters."
         columns={[
           {
             header: "Exercise",
             cell: (e) => (
               <>
-                <Link href={editHref("exercises", e.id)} className="font-medium text-brand-700 hover:underline" lang="de">
+                <Link href={editHref("exercises", e.id)} className="font-medium text-ink hover:text-brand-700 hover:underline" lang="de">
                   {pickText(e.title, "de").text}
                 </Link>
                 <p className="font-mono text-xs text-ink-muted">{e.slug}</p>

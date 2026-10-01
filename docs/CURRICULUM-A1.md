@@ -120,6 +120,8 @@ The authoring notes flagged these points for the native-speaker review (in addit
 - **Real places** (Kiel, Heidelberg, Hamburg sights) are used for realism. All people, hotels, shops, companies and phone numbers are fictional.
 
 ### Content QA findings (2026-09-29)
+The itemised findings below are also kept in machine-readable form in `content/curriculum/a1/review-findings.js` (ids AK-, AV-, PE-, ID-), so the readiness report (§2c) shows each one on the lessons and the exam it affects. A reviewer who resolves a finding removes its entry there in the same change that records the outcome here. None of them has been resolved yet.
+
 A pre-publish QA pass checked modules 1–12 and the practice exam. It used the existing schemas, grading engine, `content:check` and `audio:verify`, plus an AI read-through of every German text. Nothing was changed in the content. The list below adds to the authoring notes above; it replaces none of them. An AI read-through is **not** a native-speaker review: every item still needs a person to confirm or reject it.
 
 **Structurally valid.** No schema, reference, orphan, duplicate or answer-key errors. Every graded exercise scores 100% with the key and fails with wrong answers. Re-checked by hand and still valid:
@@ -189,6 +191,59 @@ A pre-publish QA pass checked modules 1–12 and the practice exam. It used the 
 - The exam's Hören Teil 1 titles use "Beispiel 1–6". In the Goethe format "Beispiel" is the unscored example; the scored items are "Aufgabe".
 
 **Database state seen during QA (`lga_dev`, local development database):** Module 1 `hallo` is approved and published, but none of its lessons are published. Four of its lessons are approved but unpublished. Six items carry a `human_review` approval dated 2026-09-29: 1 module, 1 exercise, 2 words, 2 grammar topics. So learners see an empty module, and the six published items can't be reached through any published lesson. Confirm that these approvals were genuine reviews; if they weren't, send them back to draft in `/admin`. The media library also holds one unattached test upload ("sdfsd", `Unit 02.mp3`, `source: native`, no licence). Remove it unless its licence is documented.
+
+## 2c. Readiness report
+
+`bun run content:check -- --all` (read-only; `--level a2` for another level, `--json` for the full report) and the admin page `/admin/readiness` show the same report, built by `lib/services/readinessService.js` from the **stored** content, so CMS edits after seeding are checked too. The admin page isn't in the admin navigation yet; it will be linked once the uncommitted CMS navigation work is committed.
+
+Per lesson it says whether learners can open it now (**live**: level, module, lesson and everything the lesson uses approved and published) and gives one readiness state, the first that applies:
+
+| State | Meaning |
+|---|---|
+| blocked | a structural problem (list below) |
+| needs audio | required listening audio has no playable source |
+| needs review | the lesson or anything it uses isn't approved, carries a test-fixture approval, or has an open QA finding |
+| ready | technically valid, approved by a person, audio present, no open QA finding |
+
+"Ready" is a factual check. It never says the German or the teaching is good: that stays a person's review. Nothing in the report approves or publishes anything.
+
+**Structural checks** (errors unless noted):
+- broken lesson → exercise, grammar or word references, and archived dependencies
+- duplicate block keys; a lesson with no blocks; the same word or exercise twice in a lesson (warning); one exercise in several lessons (warning: progress is per lesson)
+- lesson, exercise, grammar and word content that no longer passes its schema
+- answer keys: the key must score 100% and wrong answers must not pass (the same check the source tests run, `lib/exercises/answerKey.js`)
+- attached recordings and images that are missing or archived
+- Goethe links: the reference must exist, name one exam part (not the whole exam) and match the exercise's skill (Hören ↔ listening, Lesen ↔ reading, Schreiben ↔ writing, Sprechen ↔ speaking)
+- duplicate lesson or module positions; gaps in the order (warning)
+- a published level or module that learners see empty; a published lesson learners can't open (warning)
+- the sequence (`lib/learning/continuation.js`): a simulated learner follows "Continue" from no progress and must reach every live lesson once, in order, never be sent back to a completed lesson, and end with every module page pointing to the next module and the last one reporting the level complete
+- per exam: the exam's own publish readiness, its exercises (the checks above), missing audio, open findings, and sections that don't match a Goethe part (warning)
+
+The source files keep their own integrity tests (`tests/unit/curriculum-*.test.js`), now including the Goethe links and that every QA finding points at an existing item. `tests/integration/readiness.test.js` breaks stored content in each of these ways and checks that the report finds it and writes nothing.
+
+### State of `lga_dev` (read-only report, 2026-10-01)
+The local development database. Nothing was changed; no seed, approval, publish or audio generation was run.
+
+| # | Module | Lessons | Live | Needs audio | Needs review | Items approved | Required audio missing |
+|---|---|---|---|---|---|---|---|
+| 1 | hallo | 6 | 0 | 5 | 1 | 43 / 121 | 30 |
+| 2 | menschen-und-berufe | 5 | 0 | 4 | 1 | 15 / 82 | 27 |
+| 3 | in-der-stadt | 6 | 0 | 5 | 1 | 16 / 85 | 31 |
+| 4 | essen-und-einkaufen | 5 | 0 | 2 | 3 | 14 / 82 | 20 |
+| 5 | alltag-und-familie | 5 | 0 | 3 | 2 | 14 / 80 | 16 |
+| 6 | freizeit-und-feste | 6 | 0 | 4 | 2 | 16 / 85 | 27 |
+| 7 | arbeit-und-buero | 5 | 0 | 4 | 1 | 16 / 81 | 29 |
+| 8 | gesundheit | 5 | 0 | 4 | 1 | 14 / 77 | 26 |
+| 9 | wohnen | 6 | 0 | 4 | 2 | 14 / 84 | 25 |
+| 10 | was-hast-du-gemacht | 5 | 0 | 3 | 2 | 13 / 81 | 19 |
+| 11 | kleidung-und-kaufhaus | 5 | 0 | 4 | 1 | 10 / 80 | 29 |
+| 12 | reisen-und-wetter | 6 | 0 | 5 | 1 | 6 / 83 | 32 |
+
+- The level and all 12 modules are approved and published, but no lesson is: learners see 12 empty modules (13 blocking errors: one per module, one for the level). No lesson has a structural problem.
+- 47 lessons, every module test and the practice exam (31 clips) are blocked on generated audio (`audio:generate` needs a Google TTS key). The 18 lessons without listening audio still need review: most of what they use is draft.
+- 214 items are approved, all recorded as human review: the level, the 12 modules, the practice exam, and exactly 50 each of lessons, exercises, grammar topics and words. Exactly 50 per type matches one page of an admin list, which suggests page-wise approval rather than item-by-item review. Confirm whether these were genuine reviews; if not, send them back to draft in `/admin`.
+- The word `alter` contains Bangla text, which needs review by a Bangla speaker. The source files contain none, so it was added in the CMS.
+- The 34 open QA findings above are attached to their lessons and the exam.
 
 ## 3. Mastery thresholds
 

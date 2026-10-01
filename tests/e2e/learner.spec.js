@@ -16,8 +16,9 @@ test("a learner completes Module 1, lesson 1, and progress updates", async ({ pa
   await register(page);
 
   // Dashboard points at the first lesson.
-  const cont = page.getByRole("link", { name: /Continue learning/ });
+  const cont = page.getByTestId("primary-action");
   await expect(cont).toContainText("Hallo und Tschüs!");
+  await expect(page.getByTestId("skill-bars")).toContainText("Not started yet"); // no invented numbers
   await expect(page.locator('[data-module="hallo"] [data-testid="module-percent"]')).toHaveText("0%");
   await cont.click();
   await expect(page).toHaveURL(/\/learn\/a1\/hallo\/hallo-und-tschuess\?block=intro$/);
@@ -65,12 +66,19 @@ test("a learner completes Module 1, lesson 1, and progress updates", async ({ pa
       await check.click();
       const total = exercise.items.reduce((n, i) => n + (i.type === "match" ? i.pairs.length : 1), 0);
       await expect(page.getByText(`${total} / ${total} points (100%)`)).toBeVisible();
-      await page.getByRole("link", { name: /^Next:|Back to module/ }).click();
+      await page.getByRole("link", { name: /^Next:|See your lesson result/ }).last().click();
     }
   }
 
-  // Lesson complete → module page.
-  await expect(page).toHaveURL(/\/learn\/a1\/hallo$/);
+  // Lesson result: score, nothing left to practise (the second attempts were right),
+  // then on to the next lesson.
+  await expect(page).toHaveURL(/\?view=result$/);
+  const result = page.getByTestId("lesson-result");
+  await expect(result.getByRole("heading", { name: "Lesson complete!" })).toBeVisible();
+  await expect(result.getByRole("link", { name: /Next lesson: Ich heiße/ })).toBeVisible();
+  await expect(result.getByRole("link", { name: "Practise again" })).toHaveCount(0);
+  await expect(page.getByTestId("save-progress")).toHaveCount(0); // signed in: nothing to save
+  await page.goto("/learn/a1/hallo");
   await expect(page.getByText("1 of 6 lessons completed")).toBeVisible();
   await expectNoHorizontalOverflow(page, "module page");
   await expect(page.getByRole("link", { name: /Hallo und Tschüs!/ })).toContainText("Completed");
@@ -78,7 +86,8 @@ test("a learner completes Module 1, lesson 1, and progress updates", async ({ pa
   await expect(page.getByText("Targets are this app's learning goals, not official Goethe pass marks.")).toBeVisible();
 
   await page.goto("/dashboard");
-  await expect(page.getByRole("link", { name: /Continue learning/ })).toContainText("Ich heiße");
+  await expect(page.getByTestId("primary-action")).toContainText("Ich heiße");
+  await expect(page.getByTestId("lessons-completed")).toContainText("1 of");
   await expect(page.locator('[data-module="hallo"] [data-testid="module-percent"]')).not.toHaveText("0%");
   await expectNoHorizontalOverflow(page, "dashboard");
 });

@@ -3,50 +3,34 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { previewExamAction, submitExamAction } from "@/app/actions/exams";
+import { gradeGuestExamAction } from "@/app/actions/guest";
+import { updateGuestState } from "@/lib/learning/guestStore";
+import { applyExamResult } from "@/lib/learning/state";
+import SaveProgressNudge from "@/components/learn/SaveProgressNudge";
 import { RENDERERS, isItemAnswered } from "@/components/exercises/renderers";
 import { Stimulus } from "@/components/exercises/ExercisePlayer";
 import AudioPlayer from "@/components/audio/AudioPlayer";
 import LocalizedText from "@/components/ui/LocalizedText";
 import Alert from "@/components/ui/Alert";
+import ActionError from "@/components/learn/ActionError";
 import ExamResult from "@/components/exams/ExamResult";
+import { clearExamDraft, isDraftExpired, paperItemIds, pruneExamDrafts, readExamDraft, writeExamDraft } from "@/lib/exams/draft";
 
 // Runs an exam attempt: one task per screen with Previous/Next, a question palette with
 // answered/unanswered state, an optional timer and a confirmation before submitting.
 //
 // No answer is checked or scored here: the paper has no answer keys, and answers are sent
 // once, on submission, to submitExamAction, which grades them on the server. Until then
-// they stay in this browser (sessionStorage, so a reload doesn't lose them). When the
-// server's deadline passes, the exam is submitted automatically.
+// they stay in this browser (lib/exams/draft.js: localStorage, so a reload or reopening
+// the browser doesn't lose them). When the server's deadline passes, the exam is
+// submitted automatically.
 //
 // In the CMS preview (`preview`) the same UI grades through previewExamAction, which
 // stores nothing; the timer runs only in the browser.
-
-const storageKey = (id) => `lga:exam:${id}`;
-
-function readDraft(id) {
-  try {
-    const raw = window.sessionStorage.getItem(storageKey(id));
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
-}
-
-function writeDraft(id, value) {
-  try {
-    window.sessionStorage.setItem(storageKey(id), JSON.stringify(value));
-  } catch {
-    // Storage unavailable (private mode, quota): answers stay in memory only.
-  }
-}
-
-function clearDraft(id) {
-  try {
-    window.sessionStorage.removeItem(storageKey(id));
-  } catch {
-    // ignore
-  }
-}
+//
+// Guests (`guest`: { examId, version }) take a published exam as practice: graded by
+// gradeGuestExamAction on the server without storing an attempt, the timer runs in the
+// browser, and the result summary is kept in this browser's guest state.
 
 function formatRemaining(ms) {
   const total = Math.max(0, Math.ceil(ms / 1000));
@@ -84,9 +68,24 @@ function Timer({ deadline, offset, onExpire }) {
   );
 }
 
-export default function ExamPlayer({ attemptId = null, examId = null, paper, deadlineAt = null, serverNow = null, locale = "en", preview = false, learnerPolicy = null }) {
+export default function ExamPlayer({
+  attemptId = null,
+  examId = null,
+  paper,
+  deadlineAt = null,
+  serverNow = null,
+  locale = "en",
+  preview = false,
+  learnerPolicy = null,
+  guest = null,
+  practice = null,
+  onExit = null,
+}) {
   const router = useRouter();
-  const draftId = preview ? `preview:${examId}` : attemptId;
+  // Guests work like the preview in the browser: local timer, result shown here.
+  const local = preview || Boolean(guest);
+  const draftScope = preview ? `preview:${examId}` : guest ? `guest:${guest.examId}:${guest.version}` : `attempt:${attemptId}`;
+  const draftStore = { session: preview };
   const tasks = useMemo(
     () => paper.sections.flatMap((s, si) => s.exercises.map((ex) => ({ section: s, sectionIndex: si, exercise: ex }))),
     [paper],
@@ -102,22 +101,40 @@ export default function ExamPlayer({ attemptId = null, examId = null, paper, dea
   const submitted = useRef(false);
   // Server clock minus client clock, so the timer follows the server's deadline.
   const [offset] = useState(() => (serverNow ? new Date(serverNow).getTime() - Date.now() : 0));
-  const [previewDeadline] = useState(() => (preview && paper.durationMinutes ? Date.now() + paper.durationMinutes * 60_000 : null));
-  const deadline = preview ? previewDeadline : deadlineAt ? new Date(deadlineAt).getTime() : null;
+  const durationMs = paper.durationMinutes ? paper.durationMinutes * 60_000 : null;
+  // Guests and the preview: when this attempt started in this browser (the deadline is
+  // recomputed from it; the server keeps none). Set once the draft is read.
+  const [startedAt, setStartedAt] = useState(null);
+  const [expiredNotice, setExpiredNotice] = useState(false);
+  const deadline = local ? (startedAt != null && durationMs ? startedAt + durationMs : null) : deadlineAt ? new Date(deadlineAt).getTime() : null;
 
-  // Restore answers kept in this browser (a reload of a running attempt). Reading
-  // sessionStorage can only happen after hydration, hence the effect.
+  // Restore answers kept in this browser (a reload, or reopening the browser). Reading
+  // storage can only happen after hydration, hence the effect.
   useEffect(() => {
-    const draft = readDraft(draftId);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (draft?.answers) setAnswers(draft.answers);
-    if (Number.isInteger(draft?.index)) setIndex(Math.min(draft.index, tasks.length - 1));
+    pruneExamDrafts();
+    const itemIds = paperItemIds(paper);
+    let draft = readExamDraft(draftScope, { itemIds, taskCount: tasks.length, durationMs }, draftStore);
+    // A guest's time ran out while they were away: like an expired attempt, it isn't scored.
+    if (guest && isDraftExpired(draft, durationMs)) {
+      clearExamDraft(draftScope, draftStore);
+      draft = null;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setExpiredNotice(true);
+    }
+    if (draft) {
+      setAnswers(draft.answers);
+      setIndex(draft.index);
+    }
+    if (local) setStartedAt(guest && draft?.startedAt != null ? draft.startedAt : Date.now());
     setLoaded(true);
-  }, [draftId, tasks.length]);
+    // Runs once per attempt: the paper and its scope don't change while it's open.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftScope]);
 
   useEffect(() => {
-    if (loaded && !submitted.current) writeDraft(draftId, { answers, index });
-  }, [answers, index, loaded, draftId]);
+    if (loaded && !submitted.current) writeExamDraft(draftScope, { answers, index, startedAt: guest ? startedAt : null }, draftStore);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [answers, index, loaded, draftScope, startedAt]);
 
   const questions = useMemo(
     () =>
@@ -159,26 +176,45 @@ export default function ExamPlayer({ attemptId = null, examId = null, paper, dea
       startTransition(async () => {
         const res = preview
           ? await previewExamAction({ examId, answers })
-          : await submitExamAction({ attemptId, answers, reason });
+          : guest
+            ? await gradeGuestExamAction({ examId: guest.examId, version: guest.version, answers })
+            : await submitExamAction({ attemptId, answers, reason });
         if (res.ok) {
           submitted.current = true;
-          clearDraft(draftId);
-          if (preview) setOutcome(res.data);
+          clearExamDraft(draftScope, draftStore);
+          if (guest && res.data.view.result) updateGuestState((s) => applyExamResult(s, { examId: guest.examId, result: res.data.view.result }));
+          if (local) setOutcome(res.data);
           else router.refresh(); // the attempt page now renders the result
           window.scrollTo?.({ top: 0 });
         } else {
-          setError(res.message);
-          if (res.code === "CONFLICT" && !preview) {
-            clearDraft(draftId);
+          setError(res);
+          if (res.code === "CONFLICT" && !local) {
+            // The attempt is already submitted or expired on the server.
+            clearExamDraft(draftScope, draftStore);
             router.refresh();
           }
         }
       });
     },
-    [preview, examId, attemptId, answers, draftId, router],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [preview, guest, local, examId, attemptId, answers, draftScope, router],
   );
 
   const onExpire = useCallback(() => submit("timer"), [submit]);
+
+  if (outcome && guest) {
+    return (
+      <div className="space-y-6">
+        <ExamResult view={outcome.view} locale={locale} practice={practice} />
+        <SaveProgressNudge next={typeof window === "undefined" ? "/goethe" : window.location.pathname} />
+        {onExit && (
+          <button type="button" onClick={onExit} className="inline-flex h-11 items-center rounded-lg border border-line bg-surface px-4 font-medium hover:bg-canvas">
+            Back to the exam overview
+          </button>
+        )}
+      </div>
+    );
+  }
 
   if (outcome) {
     return (
@@ -191,6 +227,7 @@ export default function ExamPlayer({ attemptId = null, examId = null, paper, dea
             setOutcome(null);
             setAnswers({});
             setIndex(0);
+            setStartedAt(Date.now());
           }}
           className="inline-flex h-11 items-center rounded-lg border border-line bg-surface px-4 font-medium hover:bg-canvas"
         >
@@ -208,6 +245,9 @@ export default function ExamPlayer({ attemptId = null, examId = null, paper, dea
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_16rem]" data-exam-player>
       <div className="min-w-0 space-y-5">
+        {expiredNotice && (
+          <Alert>Your unfinished attempt in this browser ran out of time while you were away, so it wasn&apos;t scored. This is a new attempt.</Alert>
+        )}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-ink-muted">
             <LocalizedText text={section.title} prefer="de" className="font-medium text-ink" /> · Task {index + 1} of {tasks.length}
@@ -270,7 +310,7 @@ export default function ExamPlayer({ attemptId = null, examId = null, paper, dea
           })}
         </ol>
 
-        {error && <Alert tone="error">{error}</Alert>}
+        <ActionError error={error} />
 
         <div className="sticky bottom-0 -mx-4 flex flex-wrap items-center justify-between gap-3 border-t border-line bg-surface/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:rounded-xl sm:border">
           <button
@@ -374,7 +414,9 @@ export default function ExamPlayer({ attemptId = null, examId = null, paper, dea
         ) : (
           <p className="mt-2 text-sm">All {questions.length} questions are answered.</p>
         )}
-        <p className="mt-2 text-sm text-ink-muted">{preview ? "Preview: nothing is saved." : "After submitting you can't change your answers."}</p>
+        <p className="mt-2 text-sm text-ink-muted">
+          {preview ? "Preview: nothing is saved." : guest ? "Your result is shown right away and kept in this browser only." : "After submitting you can't change your answers."}
+        </p>
         <div className="mt-5 flex flex-wrap justify-end gap-2">
           <button type="button" onClick={() => dialogRef.current?.close()} className="inline-flex h-11 items-center rounded-lg border border-line px-4 font-medium hover:bg-canvas">
             Keep working

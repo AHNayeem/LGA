@@ -8,64 +8,71 @@ import { editHref, lessonPreviewHref, listHref, newHref } from "@/lib/content/ad
 import StatusBadge from "@/components/ui/StatusBadge";
 import LifecycleControls from "@/components/admin/LifecycleControls";
 import BulkReviewControls from "@/components/admin/BulkReviewControls";
+import BulkActionBar, { SelectAllCheckbox } from "@/components/admin/BulkSelection";
+import { ButtonLink, PageHeader, RowCheckbox, tableClasses as tc } from "@/components/admin/list";
 
 export const metadata = { title: "Module review" };
 
 const t = (text) => pickText(text, "de").text;
 const en = (text) => pickText(text, "en").text;
 
-function Row({ kind, item, title, links, children }) {
+const bulkId = (kind) => `bulk-module-${kind}`;
+
+function Row({ kind, item, title, links, children, selectable = true }) {
   return (
-    <tr className="border-b border-line align-top last:border-0">
-      <td className="px-4 py-3">
+    <tr className={`${tc.tr} has-[input[data-bulk-row]:checked]:bg-brand-50/70`}>
+      <td className="w-9 py-2 pl-3 align-top">{selectable && <RowCheckbox formId={bulkId(kind)} id={item.id} label={`Select ${item.slug}`} />}</td>
+      <td className={`${tc.td} align-top`}>
         <p className="font-medium" lang="de">
-          <Link href={editHref(kind, item.id)} className="hover:underline">
+          <Link href={editHref(kind, item.id)} className="hover:text-brand-700 hover:underline">
             {title}
           </Link>
         </p>
-        <p className="font-mono text-xs text-ink-muted">{item.slug}</p>
+        <p className="font-mono text-[11px] text-ink-muted">{item.slug}</p>
         {links}
         {children && (
-          <details className="mt-2 text-sm">
-            <summary className="cursor-pointer text-brand-700">Preview content</summary>
-            <div className="mt-2 max-w-2xl space-y-2">{children}</div>
+          <details className="group mt-1 text-[13px]">
+            <summary className="cursor-pointer select-none text-xs font-medium text-brand-700 hover:underline">Preview content</summary>
+            <div className="mt-2 max-w-2xl space-y-2 rounded-md border border-line bg-canvas/50 p-3">{children}</div>
           </details>
         )}
       </td>
-      <td className="px-4 py-3">
+      <td className={`${tc.td} align-top`}>
         <StatusBadge status={item.reviewStatus} />
         {item.reviewStatus === "approved" && item.approvalBasis === "test_fixture" && (
-          <p className="mt-1 max-w-[10rem] text-xs font-medium text-warning-700" data-testid="fixture-approval">
+          <p className="mt-1 max-w-[10rem] text-[11px] font-medium text-warning-700" data-testid="fixture-approval">
             Test-fixture approval – not a genuine review
           </p>
         )}
       </td>
-      <td className="px-4 py-3">
+      <td className={`${tc.td} align-top`}>
         <StatusBadge status={item.publishStatus} />
       </td>
-      <td className="px-4 py-3 tabular-nums">v{item.version}</td>
-      <td className="px-4 py-3">
+      <td className={`${tc.td} align-top tabular-nums text-ink-muted`}>v{item.version}</td>
+      <td className={`${tc.td} align-top`}>
         <LifecycleControls kind={kind} item={item} />
       </td>
     </tr>
   );
 }
 
-function Table({ id, title, count, children }) {
+function Table({ id, title, count, kind, children }) {
   return (
     <section aria-labelledby={id} className="mt-8">
-      <h2 id={id} className="text-lg font-semibold">
-        {title} <span className="font-normal text-ink-muted">({count})</span>
+      <h2 id={id} className="text-[15px] font-semibold tracking-tight">
+        {title} <span className="font-normal tabular-nums text-ink-muted">({count})</span>
       </h2>
-      <div className="mt-3 overflow-x-auto rounded-xl border border-line bg-surface">
-        <table className="w-full min-w-[760px] text-left text-sm">
-          <thead className="border-b border-line text-xs uppercase text-ink-muted">
+      {kind && count > 0 && <BulkActionBar formId={bulkId(kind)} kind={kind} />}
+      <div className={`mt-3 ${tc.wrap}`}>
+        <table className={`${tc.table} min-w-190`}>
+          <thead className={tc.thead}>
             <tr>
-              <th scope="col" className="px-4 py-3">Item</th>
-              <th scope="col" className="px-4 py-3">Review</th>
-              <th scope="col" className="px-4 py-3">Visibility</th>
-              <th scope="col" className="px-4 py-3">Version</th>
-              <th scope="col" className="px-4 py-3">Actions</th>
+              <th scope="col" className="h-9 w-9 pl-3">{kind && count > 0 && <SelectAllCheckbox formId={bulkId(kind)} />}</th>
+              <th scope="col" className={tc.th}>Item</th>
+              <th scope="col" className={tc.th}>Review</th>
+              <th scope="col" className={tc.th}>Visibility</th>
+              <th scope="col" className={tc.th}>Version</th>
+              <th scope="col" className={tc.th}>Actions</th>
             </tr>
           </thead>
           <tbody>{children}</tbody>
@@ -127,47 +134,53 @@ export default async function ModuleReviewPage({ params }) {
 
   return (
     <>
-      <nav aria-label="Breadcrumb" className="text-sm text-ink-muted">
-        <Link href="/admin" className="hover:underline">
-          Content administration
-        </Link>
-        {" / "}
-        <Link href={listHref(COLLECTIONS.modules)} className="hover:underline">
-          Modules
-        </Link>
-      </nav>
-      <h1 className="mt-1 text-2xl font-semibold tracking-tight">
-        Review: {mod.levelCode} · <span lang="de">{t(mod.title)}</span>
-      </h1>
-      <p className="mt-1 max-w-3xl text-sm text-ink-muted">
-        Source: {mod.sourceType}
-        {mod.sourceReference ? ` – ${mod.sourceReference}` : ""}. Check the German, the answer keys and the audio before approving.
-        Learners see the module only when the level ({level?.code}: {level?.publishStatus ?? "missing"}), the module, its lessons and all their content are published.
-      </p>
+      <PageHeader
+        crumbs={[
+          { href: "/admin", label: "Content administration" },
+          { href: listHref(COLLECTIONS.modules), label: "Modules" },
+        ]}
+        title={
+          <>
+            Review: {mod.levelCode} · <span lang="de">{t(mod.title)}</span>
+          </>
+        }
+        description={
+          <>
+            Source: {mod.sourceType}
+            {mod.sourceReference ? ` – ${mod.sourceReference}` : ""}. Check the German, the answer keys and the audio before approving.
+            Learners see the module only when the level ({level?.code}: {level?.publishStatus ?? "missing"}), the module, its lessons and all their content are published.
+          </>
+        }
+        actions={
+          <>
+            <ButtonLink href={listHref(COLLECTIONS.lessons, { moduleId: mod.id, publish: "any" })} variant="ghost">
+              All lessons (incl. archived)
+            </ButtonLink>
+            <ButtonLink href={newHref(COLLECTIONS.lessons, { moduleId: mod.id })} variant="secondary" icon="plus">
+              Add lesson
+            </ButtonLink>
+            <ButtonLink href={editHref(COLLECTIONS.modules, mod.id)} variant="secondary">
+              Edit module
+            </ButtonLink>
+          </>
+        }
+      />
 
-      <div className="mt-4 flex flex-wrap gap-2 text-sm">
-        <Link href={editHref(COLLECTIONS.modules, mod.id)} className="inline-flex h-9 items-center rounded-lg border border-line bg-surface px-4 font-medium hover:bg-canvas">
-          Edit module
-        </Link>
-        <Link href={newHref(COLLECTIONS.lessons, { moduleId: mod.id })} className="inline-flex h-9 items-center rounded-lg border border-line bg-surface px-4 font-medium hover:bg-canvas">
-          Add lesson
-        </Link>
-        <Link href={listHref(COLLECTIONS.lessons, { moduleId: mod.id, publish: "any" })} className="inline-flex h-9 items-center rounded-lg border border-line bg-surface px-4 font-medium hover:bg-canvas">
-          All lessons (incl. archived)
-        </Link>
-      </div>
-
-      <div className="mt-6 rounded-xl border border-line bg-surface p-4">
-        <h2 className="text-sm font-semibold">Bulk steps for this module</h2>
-        <p className="mb-3 mt-1 text-xs text-ink-muted">Each step only moves items that are in the previous state. Publishing checks dependencies and audio.</p>
-        <BulkReviewControls moduleId={mod.id} />
+      <div className="mt-5 rounded-lg border border-line bg-surface px-3 py-2.5 shadow-xs">
+        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+          <h2 className="text-[13px] font-semibold">Bulk steps for this module</h2>
+          <p className="text-xs text-ink-muted">Each step only moves items that are in the previous state. Publishing checks dependencies and audio.</p>
+        </div>
+        <div className="mt-2">
+          <BulkReviewControls moduleId={mod.id} />
+        </div>
       </div>
 
       <Table id="module-heading" title="Module" count={1}>
-        <Row kind={COLLECTIONS.modules} item={mod} title={t(mod.title)} />
+        <Row kind={COLLECTIONS.modules} item={mod} title={t(mod.title)} selectable={false} />
       </Table>
 
-      <Table id="lessons-heading" title="Lessons" count={lessons.length}>
+      <Table id="lessons-heading" title="Lessons" count={lessons.length} kind={COLLECTIONS.lessons}>
         {lessons.map((l) => (
           <Row
             key={l.id}
@@ -175,7 +188,7 @@ export default async function ModuleReviewPage({ params }) {
             item={l}
             title={t(l.title)}
             links={
-              <Link href={lessonPreviewHref(l.id)} className="text-sm text-brand-700 hover:underline">
+              <Link href={lessonPreviewHref(l.id)} className="mt-0.5 inline-block text-xs font-medium text-brand-700 hover:underline">
                 Preview as learner
               </Link>
             }
@@ -192,7 +205,7 @@ export default async function ModuleReviewPage({ params }) {
         ))}
       </Table>
 
-      <Table id="exercises-heading" title="Exercises" count={exercises.length}>
+      <Table id="exercises-heading" title="Exercises" count={exercises.length} kind={COLLECTIONS.exercises}>
         {exercises.map((ex) => (
           <Row key={ex.id} kind={COLLECTIONS.exercises} item={ex} title={t(ex.title)}>
             <ExercisePreview ex={ex} />
@@ -200,7 +213,7 @@ export default async function ModuleReviewPage({ params }) {
         ))}
       </Table>
 
-      <Table id="grammar-heading" title="Grammar topics" count={grammarTopics.length}>
+      <Table id="grammar-heading" title="Grammar topics" count={grammarTopics.length} kind={COLLECTIONS.grammarTopics}>
         {grammarTopics.map((g) => (
           <Row key={g.id} kind={COLLECTIONS.grammarTopics} item={g} title={t(g.title)}>
             {g.sections.map((s, i) => (
@@ -218,7 +231,7 @@ export default async function ModuleReviewPage({ params }) {
         ))}
       </Table>
 
-      <Table id="vocabulary-heading" title="Vocabulary" count={vocabulary.length}>
+      <Table id="vocabulary-heading" title="Vocabulary" count={vocabulary.length} kind={COLLECTIONS.vocabulary}>
         {vocabulary.map((v) => (
           <Row key={v.id} kind={COLLECTIONS.vocabulary} item={v} title={v.article ? `${v.article} ${v.lemma}` : v.lemma}>
             <p>

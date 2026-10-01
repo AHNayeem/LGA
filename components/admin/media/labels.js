@@ -17,17 +17,17 @@ export function sourceLabel(m) {
 
 // Audio source of a listening target or exercise (audioService.exerciseAudioStatuses).
 const AUDIO_SOURCE = {
-  native: { label: "Native audio attached", style: "bg-success-50 text-success-700" },
-  tts: { label: "TTS fallback", style: "bg-brand-50 text-brand-700" },
-  mixed: { label: "Native + TTS", style: "bg-success-50 text-success-700" },
-  missing: { label: "Audio missing", style: "bg-danger-50 text-danger-700" },
+  native: { label: "Native audio attached", style: "border-success-700/20 bg-success-50 text-success-700" },
+  tts: { label: "TTS fallback", style: "border-brand-600/20 bg-brand-50 text-brand-700" },
+  mixed: { label: "Native + TTS", style: "border-success-700/20 bg-success-50 text-success-700" },
+  missing: { label: "Audio missing", style: "border-danger-700/20 bg-danger-50 text-danger-700" },
 };
 
 export function AudioSourceBadge({ source, missing }) {
   const s = AUDIO_SOURCE[source];
   if (!s) return <span className="text-xs text-ink-muted">—</span>;
   return (
-    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${s.style}`} data-testid="audio-source">
+    <span className={`inline-flex h-5 items-center whitespace-nowrap rounded-md border px-1.5 text-[11px] font-medium ${s.style}`} data-testid="audio-source">
       {s.label}
       {source === "missing" && missing > 0 ? ` (${missing})` : ""}
     </span>
@@ -36,8 +36,14 @@ export function AudioSourceBadge({ source, missing }) {
 
 export function MediaStatusBadge({ status }) {
   if (!status) return null;
-  const style = status === "active" ? "bg-success-50 text-success-700" : "bg-danger-50 text-danger-700";
-  return <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${style}`}>{status}</span>;
+  const [style, dot] =
+    status === "active" ? ["border-success-700/20 bg-success-50 text-success-700", "bg-success-700"] : ["border-line bg-canvas text-ink-muted", "bg-line-strong"];
+  return (
+    <span className={`inline-flex h-5 items-center gap-1.5 whitespace-nowrap rounded-md border px-1.5 text-[11px] font-medium ${style}`}>
+      <span className={`size-1.5 rounded-full ${dot}`} aria-hidden="true" />
+      {status}
+    </span>
+  );
 }
 
 export function formatDuration(sec) {

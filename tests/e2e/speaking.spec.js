@@ -157,6 +157,6 @@ test("the upload endpoint rejects cross-site, unauthenticated and bogus requests
 
   const anon = await playwright.request.newContext({ baseURL });
   expect((await post(anon, { Origin: baseURL })).status()).toBe(401);
-  expect((await anon.get("/api/media/000000000000000000000000")).status()).toBe(401);
+  expect((await anon.get("/api/media/000000000000000000000000")).status()).toBe(404);
   await anon.dispose();
 });

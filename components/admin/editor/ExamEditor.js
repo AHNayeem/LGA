@@ -49,7 +49,7 @@ function SectionEditor({ section, index, count, onChange, onMove, onRemove, rela
   const ids = section.exerciseIds;
   const canAdd = ids.length < EXAM_LIMITS.exercisesPerSection && usedIds.length < EXAM_LIMITS.exercises;
   return (
-    <div className="rounded-xl border border-line bg-surface p-4" data-testid="exam-section">
+    <div className="rounded-lg border border-line bg-surface p-4 shadow-xs" data-testid="exam-section">
       <div className="flex flex-wrap items-end gap-2">
         <h3 className="mr-auto text-sm font-semibold">Section {index + 1}</h3>
         <RowControls index={index} count={count} label={`section ${index + 1}`} onMove={onMove} onRemove={onRemove} />
@@ -158,7 +158,7 @@ export default function ExamEditor({ item, references, related: initialRelated, 
           </h2>
           <p className="text-xs text-ink-muted">Learners go through the sections and exercises in this order. Question numbers run through the whole exam.</p>
         </div>
-        {sections.length === 0 && <p className="rounded-xl border border-dashed border-line bg-surface p-4 text-sm text-ink-muted">No sections yet. Add the first one below.</p>}
+        {sections.length === 0 && <p className="rounded-lg border border-dashed border-line-strong bg-surface p-4 text-sm text-ink-muted">No sections yet. Add the first one below.</p>}
         {sections.map((sec, i) => (
           <SectionEditor
             key={sec.uid}

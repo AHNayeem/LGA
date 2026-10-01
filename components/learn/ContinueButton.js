@@ -3,21 +3,29 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { completeBlockAction } from "@/app/actions/learning";
+import { updateGuestState } from "@/lib/learning/guestStore";
+import { applyBlockDone } from "@/lib/learning/state";
 import Alert from "@/components/ui/Alert";
+import ActionError from "@/components/learn/ActionError";
 
-// Marks a reading block (intro, grammar) as done, then moves on. In the CMS draft preview
-// nothing is recorded: it only moves on.
-export default function ContinueButton({ lessonId, blockKey, nextHref, label = "Continue", preview = false }) {
+// Marks a reading block (intro, grammar) as done, then moves on: on the server for a
+// signed-in learner, in this browser for a guest. In the CMS draft preview nothing is
+// recorded: it only moves on.
+export default function ContinueButton({ lessonId, blockKey, nextHref, label = "Continue", mode = "user", lessonBlocks = null }) {
   const router = useRouter();
   const [error, setError] = useState(null);
   const [pending, startTransition] = useTransition();
 
   function onClick() {
     setError(null);
-    if (preview) return router.push(nextHref);
+    if (mode === "preview") return router.push(nextHref);
+    if (mode === "guest") {
+      updateGuestState((s) => applyBlockDone(s, { lessonId, blockKey, blocks: lessonBlocks }));
+      return router.push(nextHref);
+    }
     startTransition(async () => {
       const res = await completeBlockAction({ lessonId, blockKey });
-      if (!res.ok) return setError(res.message);
+      if (!res.ok) return setError(res);
       router.push(nextHref);
     });
   }
@@ -32,7 +40,7 @@ export default function ContinueButton({ lessonId, blockKey, nextHref, label = "
       >
         {pending ? "Saving…" : label}
       </button>
-      {error && <Alert tone="error">{error}</Alert>}
+      <ActionError error={error} />
     </div>
   );
 }

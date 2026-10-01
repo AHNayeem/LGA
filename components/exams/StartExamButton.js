@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { startExamAction } from "@/app/actions/exams";
 import Alert from "@/components/ui/Alert";
+import ActionError from "@/components/learn/ActionError";
 
 // Starts a new attempt (or resumes the open one) on the server, then opens it.
 export default function StartExamButton({ examId, resume = false, durationMinutes = null }) {
@@ -15,7 +16,7 @@ export default function StartExamButton({ examId, resume = false, durationMinute
     startTransition(async () => {
       const res = await startExamAction({ examId });
       if (res.ok) router.push(`/exams/attempts/${res.data.attemptId}`);
-      else setError(res.message);
+      else setError(res);
     });
   }
   return (
@@ -29,7 +30,7 @@ export default function StartExamButton({ examId, resume = false, durationMinute
         {pending ? "Opening…" : resume ? "Continue the exam" : "Start the exam"}
       </button>
       {!resume && durationMinutes && <p className="text-xs text-ink-muted">The timer starts as soon as you start.</p>}
-      {error && <Alert tone="error">{error}</Alert>}
+      <ActionError error={error} />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { RENDERERS } from "@/components/exercises/renderers";
 import { Stimulus } from "@/components/exercises/ExercisePlayer";
 import LocalizedText from "@/components/ui/LocalizedText";
@@ -73,7 +74,9 @@ function ReviewTask({ entry, locale }) {
 
 // Final result of an exam attempt: score, percentage, pass/fail, section breakdown and,
 // as far as the exam's review policy allows, the per-question review.
-export default function ExamResult({ view, locale = "en", preview = false, learnerPolicy = null }) {
+// `practice`: { [sectionKey]: href } of the Goethe part practice for each section
+// (journey.goetheHref); a section with a link gets "Practise this part".
+export default function ExamResult({ view, locale = "en", preview = false, learnerPolicy = null, practice = null }) {
   const r = view.result;
   if (!r) {
     return (
@@ -128,6 +131,11 @@ export default function ExamResult({ view, locale = "en", preview = false, learn
               <th scope="col" className="py-2 text-right font-medium">
                 Answered
               </th>
+              {practice && (
+                <th scope="col" className="py-2 text-right font-medium">
+                  <span className="sr-only">Practice</span>
+                </th>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -143,6 +151,15 @@ export default function ExamResult({ view, locale = "en", preview = false, learn
                 <td className="py-2 text-right tabular-nums">
                   {s.answeredCount} / {s.questionCount}
                 </td>
+                {practice && (
+                  <td className="py-2 pl-3 text-right">
+                    {practice[s.key] && (
+                      <Link href={practice[s.key]} className={`whitespace-nowrap font-medium hover:underline ${s.ratio != null && s.ratio < r.passThreshold ? "text-danger-700" : "text-brand-700"}`}>
+                        Practise this part
+                      </Link>
+                    )}
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

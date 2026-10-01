@@ -3,10 +3,15 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { previewExerciseAction, submitExerciseAction } from "@/app/actions/learning";
+import { gradeGuestExerciseAction } from "@/app/actions/guest";
+import { updateGuestState } from "@/lib/learning/guestStore";
+import { applyExerciseResult } from "@/lib/learning/state";
+import { lessonCompletion } from "@/lib/learning/progress";
 import { RENDERERS, isItemAnswered } from "@/components/exercises/renderers";
 import AudioPlayer from "@/components/audio/AudioPlayer";
 import LocalizedText from "@/components/ui/LocalizedText";
 import Alert from "@/components/ui/Alert";
+import ActionError from "@/components/learn/ActionError";
 import ContentImage from "@/components/learn/ContentImage";
 
 const pct = (r) => `${Math.round((r ?? 0) * 100)}%`;
@@ -43,10 +48,15 @@ export function Stimulus({ stimulus, transcript, locale }) {
   );
 }
 
+const SUBMIT = { user: submitExerciseAction, guest: gradeGuestExerciseAction, preview: previewExerciseAction };
+
 // Holds the learner's answers and shows the server's grading. No answer checking happens
-// here: the payload has no answer key, and results come back from submitExerciseAction.
-// In the CMS draft preview (`preview`) answers are graded by previewExerciseAction, which
-// stores nothing, and item types skip their own writes (no recording upload).
+// here: the payload has no answer key, and results always come back from the server.
+//   mode "user"     submitExerciseAction grades and stores the attempt
+//   mode "guest"    gradeGuestExerciseAction grades without storing; the result goes into
+//                   this browser's guest state (`lessonBlocks` decide lesson completion)
+//   mode "preview"  CMS draft preview: previewExerciseAction grades, nothing is kept
+// Outside "user", item types skip their own writes (no recording upload).
 export default function ExercisePlayer({
   lessonId,
   exercise,
@@ -56,8 +66,12 @@ export default function ExercisePlayer({
   locale = "en",
   nextHref,
   nextLabel = "Continue",
-  preview = false,
+  returnLink = null,
+  mode = "user",
+  lessonBlocks = null,
 }) {
+  const preview = mode === "preview";
+  const local = mode !== "user";
   const [answers, setAnswers] = useState({});
   const [phase, setPhase] = useState(null); // null | "uploading" | "checking"
   const [outcome, setOutcome] = useState(null);
@@ -77,8 +91,8 @@ export default function ExercisePlayer({
     for (const item of exercise.items) {
       const prepare = RENDERERS[item.type]?.prepareAnswer;
       if (!Object.hasOwn(answers, item.id)) continue;
-      if (prepare && !preview) setPhase("uploading");
-      out[item.id] = prepare ? await prepare(answers[item.id], { lessonId, exerciseId: exercise.id, itemId: item.id, preview }) : answers[item.id];
+      if (prepare && !local) setPhase("uploading");
+      out[item.id] = prepare ? await prepare(answers[item.id], { lessonId, exerciseId: exercise.id, itemId: item.id, preview: local }) : answers[item.id];
     }
     return out;
   }
@@ -89,10 +103,15 @@ export default function ExercisePlayer({
       try {
         const prepared = await prepareAnswers();
         setPhase("checking");
-        const submitAction = preview ? previewExerciseAction : submitExerciseAction;
-        const res = await submitAction({ lessonId, exerciseId: exercise.id, answers: prepared });
-        if (res.ok) setOutcome(res.data);
-        else setError(res.message);
+        const res = await SUBMIT[mode]({ lessonId, exerciseId: exercise.id, answers: prepared });
+        if (!res.ok) return setError(res);
+        if (mode === "guest") {
+          const state = updateGuestState((s) =>
+            applyExerciseResult(s, { lessonId, exerciseId: exercise.id, skill: exercise.skill, result: res.data.result, blocks: lessonBlocks }),
+          );
+          const completion = lessonCompletion({ blocks: lessonBlocks ?? [] }, state.lessons[lessonId]);
+          setOutcome({ ...res.data, lesson: { done: completion.done, total: completion.total, complete: completion.complete, completedAt: state.lessons[lessonId]?.completedAt ?? null } });
+        } else setOutcome(res.data);
       } catch (err) {
         setError(err?.message || "Something went wrong. Please try again.");
       } finally {
@@ -155,7 +174,7 @@ export default function ExercisePlayer({
                     reveal={reveal}
                     result={r}
                     locale={locale}
-                    context={{ recordings, recordingLimits, preview }}
+                    context={{ recordings, recordingLimits, preview: local, mode }}
                     submitted={outcome ? { recording: outcome.recordings?.[item.id] ?? null } : null}
                   />
                 ) : (
@@ -170,7 +189,7 @@ export default function ExercisePlayer({
         })}
       </ol>
 
-      {error && <Alert tone="error">{error}</Alert>}
+      <ActionError error={error} />
 
       <div className="sticky bottom-0 -mx-4 border-t border-line bg-surface/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:rounded-xl sm:border">
         {!outcome ? (
@@ -187,12 +206,12 @@ export default function ExercisePlayer({
               {pending
                 ? phase === "uploading"
                   ? "Uploading recording…"
-                  : graded || preview
+                  : graded || local
                     ? "Checking…"
                     : "Saving…"
                 : graded
                   ? "Check answers"
-                  : preview
+                  : local
                     ? "Finish"
                     : "Save"}
             </button>
@@ -205,7 +224,7 @@ export default function ExercisePlayer({
                   {result.score} / {result.maxScore} points ({pct(result.ratio)})
                 </p>
               ) : (
-                <p className="font-semibold">{preview ? "Done (not saved in preview)." : "Saved."} Speaking practice is not scored.</p>
+                <p className="font-semibold">{preview ? "Done (not saved in preview)." : mode === "guest" ? "Done." : "Saved."} Speaking practice is not scored.</p>
               )}
               <p className={`text-sm ${result.passed ? "text-success-700" : "text-warning-700"}`}>
                 {result.passed
@@ -226,6 +245,11 @@ export default function ExercisePlayer({
               {result.passed && nextHref && (
                 <Link href={nextHref} className="inline-flex h-11 items-center rounded-lg bg-brand-600 px-5 font-medium text-white hover:bg-brand-700">
                   {nextLabel}
+                </Link>
+              )}
+              {returnLink && (
+                <Link href={returnLink.href} className="inline-flex h-11 items-center rounded-lg border border-line bg-surface px-4 font-medium hover:bg-canvas">
+                  {returnLink.label}
                 </Link>
               )}
             </div>

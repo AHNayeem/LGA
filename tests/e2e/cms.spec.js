@@ -104,6 +104,39 @@ test("admin composes a lesson from library content; learners don't see the draft
   await ctx.close();
 });
 
+test("admin selects several list rows and moves them one review step", async ({ page, isMobile }) => {
+  test.skip(isMobile, "admin authoring runs on desktop only");
+  test.setTimeout(90_000);
+  const s = suffix();
+  await loginAdmin(page);
+  for (const lemma of ["Tisch", "Stuhl"]) {
+    await page.goto("/admin/vocabulary/new");
+    await page.getByLabel("Lemma *").fill(lemma);
+    await page.getByLabel("Slug").fill(`${lemma.toLowerCase()}-${s}`);
+    await page.getByLabel("Article *").selectOption("der");
+    await page.getByRole("group", { name: /Meanings/ }).getByLabel("English *").fill(lemma);
+    await page.getByRole("button", { name: "Create draft" }).click();
+    await expect(page).toHaveURL(/\?created=1$/);
+  }
+
+  await page.goto(`/admin/vocabulary?q=${s}`);
+  const bar = page.getByTestId("bulk-bar");
+  await expect(bar.getByRole("button", { name: "Mark reviewed" })).toBeDisabled();
+  await page.getByLabel("Select all on this page").check();
+  await expect(bar.getByText("2 selected")).toBeVisible();
+  await bar.getByRole("button", { name: "Mark reviewed" }).click();
+  await expect(bar.getByText("2 changed")).toBeVisible();
+  await expect(page.getByRole("row", { name: /der Tisch/ }).getByText("reviewed", { exact: true })).toBeVisible();
+  await expect(page.getByRole("row", { name: /der Stuhl/ }).getByText("reviewed", { exact: true })).toBeVisible();
+
+  await page.getByLabel(`Select tisch-${s}`).check();
+  await expect(bar.getByText("1 selected")).toBeVisible();
+  await bar.getByRole("button", { name: "Approve" }).click();
+  await expect(bar.getByText("1 changed")).toBeVisible();
+  await expect(page.getByRole("row", { name: /der Tisch/ }).getByText("approved", { exact: true })).toBeVisible();
+  await expect(page.getByRole("row", { name: /der Stuhl/ }).getByText("reviewed", { exact: true })).toBeVisible();
+});
+
 test("a learner cannot open the CMS editors", async ({ page }) => {
   await register(page);
   for (const path of ["/admin/vocabulary", "/admin/lessons/new", "/admin/review"]) {

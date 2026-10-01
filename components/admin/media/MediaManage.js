@@ -8,6 +8,7 @@ import ContentPicker from "@/components/admin/editor/ContentPicker";
 import StatusBadge from "@/components/ui/StatusBadge";
 import { AudioSourceBadge } from "@/components/admin/media/labels";
 import { editHref } from "@/lib/content/adminSections";
+import { buttonClass } from "@/components/ui/button";
 
 // Client controls of the media detail page. Every action goes through a Server Action
 // whose service re-checks permissions, references and versions; the UI only offers the
@@ -30,7 +31,7 @@ function Feedback({ result, success }) {
 }
 
 const input = "w-full rounded-md border border-line bg-surface px-2.5 py-1.5 text-sm";
-const button = "inline-flex h-9 items-center rounded-lg border border-line bg-surface px-3 text-sm font-medium hover:bg-canvas disabled:opacity-50";
+const button = buttonClass({ variant: "secondary" });
 
 export function MediaMetadataForm({ media }) {
   const id = useId();
@@ -124,7 +125,7 @@ export function MediaMetadataForm({ media }) {
         )}
       </div>
       <div className="flex flex-wrap items-center gap-3">
-        <button type="submit" disabled={pending} className="inline-flex h-9 items-center rounded-lg bg-brand-600 px-4 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60">
+        <button type="submit" disabled={pending} className={buttonClass({ variant: "primary" })}>
           {pending ? "Saving…" : "Save details"}
         </button>
         <Feedback result={result} success="Details saved." />

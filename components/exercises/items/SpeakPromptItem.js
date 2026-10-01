@@ -78,7 +78,12 @@ export default function SpeakPromptItem({ item, value, onChange, disabled, revea
         <LocalizedText as="p" text={item.cue} prefer="de" className="rounded-lg border border-line bg-canvas px-3 py-2 font-medium" />
       )}
       <p className="text-sm text-ink-muted">Say your answer out loud. You can record yourself and listen back. Then rate yourself.</p>
-      {preview && <p className="text-xs text-ink-muted">Preview: recordings stay in this browser and are not uploaded or saved.</p>}
+      {preview &&
+        (context?.mode === "guest" ? (
+          <p className="text-xs text-ink-muted">Your recording stays on this page only. Create a free account to keep your recordings.</p>
+        ) : (
+          <p className="text-xs text-ink-muted">Preview: recordings stay in this browser and are not uploaded or saved.</p>
+        ))}
 
       {!submitted && (
         <VoiceRecorder

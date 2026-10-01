@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import { readdirSync } from "node:fs";
 import { CURRICULUM } from "@/content/curriculum/index.js";
 import { REFERENCES } from "@/content/seed/references";
+import { EXAMS } from "@/content/exams/index.js";
+import { REVIEW_FINDINGS, REVIEW_FINDING_KINDS } from "@/content/curriculum/a1/review-findings";
+import { GOETHE_PART_SKILLS } from "@/lib/learning/goethe";
 import { exerciseSchema, grammarTopicSchema, lessonSchema, moduleSchema, vocabularySchema } from "@/lib/validation/content";
 import { gradeExercise } from "@/lib/exercises/engine";
 import { exerciseCues, uniqueCues, vocabularyCues } from "@/lib/audio/cues";
@@ -156,5 +159,46 @@ describe.skipIf(Boolean(process.env.CURRICULUM_MODULE_DIR))("A1 curriculum as a 
     const forms = CURRICULUM.flatMap((d) => d.vocabulary.map((v) => `${v.article ?? ""} ${v.lemma}`.trim().toLowerCase()));
     const dupForms = forms.filter((s, i) => forms.indexOf(s) !== i);
     expect(dupForms, "the same word in two modules").toEqual([]);
+  });
+
+  // Goethe Prep groups exercises by the exam part they link to; a link to a part of another
+  // skill would put, say, a reading exercise under Hören.
+  it("every Goethe link names one exam part, and the exercise has that part's skill", () => {
+    const goethe = REFERENCES.find((r) => r.kind === "exam_spec");
+    const parts = new Map(goethe.children.map((c) => [c.slug, c.slug.slice(goethe.slug.length + 1)]));
+    expect([...parts.values()].sort()).toEqual(Object.keys(GOETHE_PART_SKILLS).sort());
+    const wrong = [];
+    let linked = 0;
+    for (const e of [...CURRICULUM.flatMap((d) => d.exercises), ...EXAMS.flatMap((x) => x.exercises ?? [])]) {
+      for (const r of e.refs ?? []) {
+        if (r.ref === goethe.slug) wrong.push(`${e.slug}: links the whole exam, not a part`);
+        if (!parts.has(r.ref)) continue;
+        linked++;
+        if (GOETHE_PART_SKILLS[parts.get(r.ref)] !== e.skill) wrong.push(`${e.slug}: ${e.skill} exercise linked to ${r.ref}`);
+      }
+    }
+    expect(wrong).toEqual([]);
+    expect(linked).toBeGreaterThan(100);
+  });
+
+  // The open QA findings (content/curriculum/a1/review-findings.js) must point at real items,
+  // or the readiness report would silently drop them.
+  it("every open QA finding points at an existing item and question", () => {
+    const all = {
+      exercises: [...CURRICULUM.flatMap((d) => d.exercises), ...EXAMS.flatMap((x) => x.exercises ?? [])],
+      grammarTopics: CURRICULUM.flatMap((d) => d.grammar),
+      vocabulary: CURRICULUM.flatMap((d) => d.vocabulary),
+    };
+    const ids = new Set();
+    for (const f of REVIEW_FINDINGS) {
+      expect(ids.has(f.id), `duplicate finding ${f.id}`).toBe(false);
+      ids.add(f.id);
+      expect(Object.keys(REVIEW_FINDING_KINDS)).toContain(f.kind);
+      for (const t of f.targets) {
+        const item = all[t.collection].find((x) => x.slug === t.slug);
+        expect(item, `${f.id}: ${t.collection} ${t.slug}`).toBeTruthy();
+        for (const q of t.items ?? []) expect(item.items.some((i) => i.id === q), `${f.id}: ${t.slug} ${q}`).toBe(true);
+      }
+    }
   });
 });

@@ -22,7 +22,7 @@ export default async function ImportVocabularyPage() {
         title="Import words"
         description={`Add up to ${IMPORT_LIMITS.maxRows.toLocaleString("en")} words at once from a CSV file or a spreadsheet. Every row is checked with the same rules as the word editor before anything is saved, and new words are drafts until they are reviewed and published.`}
       />
-      <details className="mt-4 rounded-xl border border-line bg-surface p-4 text-sm">
+      <details className="mt-4 rounded-lg border border-line bg-surface p-4 shadow-xs text-sm">
         <summary className="cursor-pointer font-medium">Columns</summary>
         <p className="mt-2 text-ink-muted">
           Header names are matched ignoring case, spaces and underscores. Required: <code>lemma</code>, <code>pos</code>, <code>meaning_en</code>, and a level and source

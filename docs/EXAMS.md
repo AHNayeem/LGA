@@ -56,7 +56,7 @@ Indexes: unique partial `{ userId, examId }` while `status: "in_progress"` (at m
      else insert { snapshot, seed, startedAt, deadlineAt }                     (unique index stops duplicates)
   → /exams/attempts/[id]
      getExamAttempt: owner only; in progress → paper (no keys, no transcripts) + deadline + server clock
-     ExamPlayer: one task per screen, Previous/Next, palette, timer, answers in sessionStorage
+     ExamPlayer: one task per screen, Previous/Next, palette, timer, answers kept in the browser (lib/exams/draft.js)
   submitExamAction({ attemptId, answers, reason })
      owner only; must be in progress; not past deadline + 60 s grace (else closed as expired, 409)
      gradeExam(snapshot, sanitized answers, seed) → conditional update { status: in_progress } → submitted
@@ -86,7 +86,7 @@ Match and order items are shuffled with a seeded permutation. Lessons seed it wi
 The filtering happens on the server (`examResultView`), so hidden answer keys never reach the browser. During the attempt there are never transcripts or explanations, whatever the exercise's own `transcriptPolicy` says.
 
 ### Listening
-`maxPlays` / `itemAudioMaxPlays` are applied by the audio player as in lessons. They remain a practice rule enforced in the browser, not a security boundary; the exam doesn't rely on them. Audio access follows `canReadMedia`: TTS is readable by signed-in users, recordings only while their exercise is approved and published.
+`maxPlays` / `itemAudioMaxPlays` are applied by the audio player as in lessons. They remain a practice rule enforced in the browser, not a security boundary; the exam doesn't rely on them. Audio access follows `canReadMedia`: TTS is readable by everyone (guests included), uploaded recordings only while their exercise is approved and published.
 
 ## What is not auto-scored
 There is no reliable automated evaluation of speaking or free writing in this project (no pronunciation scoring, no rubric scorer). Therefore:
@@ -101,7 +101,7 @@ There is no reliable automated evaluation of speaking or free writing in this pr
 | Lesson completion | `userProgress` | every block done |
 | Skill mastery | computed from lesson attempts | latest attempt per exercise vs. thresholds |
 | **Exam completion** | `examAttempts` | submitting an exam attempt |
-| Level completion | not implemented | – |
+| Level completion | computed on read (`LEARNER.md`) | every available lesson completed; exams never count |
 
 Exam attempts never write to `attempts`, `userProgress` or `userVocabulary`, never count towards mastery, and never mark a lesson, module or level complete. Exams are not locked behind finishing modules; no such rule was specified.
 
@@ -138,10 +138,32 @@ The preview follows the lesson preview principles (CMS Phase 3): `getExamPreview
 | `tests/unit/exam-content.test.js` | Seeded exam definitions: schema, every question auto-scored, answer keys self-consistent, own slugs, no Bangla, bounded audio |
 | `tests/integration/exams.test.js` | Permissions (USER, anonymous) on every CMS entry point; relation checks; publish refused with ungraded/unpublished/empty content; duplicate keys and exercises; bulk review. Visibility (draft, unpublished exercise, admin can't start a draft). Start/resume, no keys in the paper, scoring, unanswered, threshold boundary, forged fields and unknown ids, immutability, concurrent submissions, cross-user access, grace period and expiry, untimed exams, snapshot stability after edits. Review policies. No writes to `attempts`/`userProgress`/`userVocabulary`. Preview: permissions and a full-database snapshot before and after |
 | `tests/integration/curriculum-a1.test.js` | The seeded exam publishes with its exercises and appears on the level page |
+| `tests/unit/exam-draft.test.js` | Draft normalisation, scopes, guest expiry (deadline + grace, the server's `SUBMIT_GRACE_MS`), pruning, blocked storage |
+| `tests/e2e/journeys.spec.js` | Guest: reload and a closed browser keep answers, task and clock; the overview offers to continue; an expired attempt isn't scored; a full attempt → result → part practice; the draft is gone after submission |
 | `tests/e2e/exams.spec.js` | Real UI: level page → overview → start → palette, Previous/Next, reload keeps answers, unanswered warning, submit → 100% passed with review, history, another learner gets 404. Admin preview grades and creates no attempt; learners are redirected away |
 
+## Guests
+Guests take published exams as practice (`/exams/<level>/<exam>?take=1`):
+- `getGuestExamPaper` builds the same snapshot and paper; `gradeExamAsGuest` grades it with `gradeExam` and returns `examResultView` under the exam's own review policy.
+- The shuffle seed is fixed per exam version (`guest:<examId>:<version>`). A submission for another version is rejected (409).
+- **No attempt is stored.** The timer runs in the browser, and the result summary is kept in the guest's browser state (`LEARNER.md`).
+- **Unfinished attempts** are kept in the browser (`lib/exams/draft.js`, scope `guest:<examId>:<version>`): the answers and the time the guest started, so a reload or reopening the browser continues the same attempt and the same clock (the deadline is recomputed from the start time and the exam's duration). The overview then says "Continue your practice exam" with the minutes left. Once the deadline plus the same 60 s grace as for stored attempts has passed, the draft is discarded unscored ("ran out of time while you were away") and a new attempt starts, like an expired attempt. A new exam version starts fresh.
+- Results (guest or signed in) link each section to the practice of the same Goethe part (`/goethe/<level>/<part>`).
+
+## Exam drafts in the browser
+`lib/exams/draft.js`, versioned keys `lga:exam-draft:v1:<scope>` in `localStorage` (the CMS preview: `sessionStorage`, this tab only):
+
+| Scope | Holds | Removed |
+|---|---|---|
+| `attempt:<attemptId>` (signed in) | answers, current task | after a successful submission; when the server rejects the attempt as submitted or expired (409); after 7 days without a change |
+| `guest:<examId>:<version>` | answers, current task, start time | after a successful submission; when the time plus 60 s grace ran out; after 7 days |
+
+- A draft is untrusted input. `normalizeDraft` keeps only answers to the paper's own questions (bounded strings, lists and maps), a valid task index and a plausible start time, and drops anything else. The server never reads a draft: it validates and grades whatever is submitted, exactly as before. The server's deadline for stored attempts is unchanged.
+- `pruneExamDrafts` runs when the player opens: stale, unreadable and old-version drafts go, as do the unversioned `sessionStorage` drafts of earlier builds.
+- Storage that is blocked or full never breaks the exam: answers then stay in memory for the page view.
+
 ## Known limitations
-- **Answers live in the browser until submission.** A reload keeps them (sessionStorage), but another device or a cleared browser starts the open attempt with no answers. The deadline keeps running either way.
+- **Answers live in the browser until submission.** A reload and reopening the same browser keep them (localStorage), but another device or a cleared browser starts the open attempt with no answers. The deadline keeps running either way.
 - **An open attempt continues from its snapshot** even if the exam is unpublished or edited meanwhile; new attempts can't start until it is available again.
 - **One exam attempt at a time per exam**; unlimited attempts overall (no attempt limit was specified).
 - **Timer precision:** the grace period (60 s) covers slow networks. A learner whose browser is closed past the deadline gets an expired attempt, not a score.

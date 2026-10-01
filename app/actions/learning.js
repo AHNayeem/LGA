@@ -4,6 +4,7 @@ import { refresh } from "next/cache";
 import { requireUser } from "@/lib/auth/dal";
 import * as learningService from "@/lib/services/learningService";
 import * as recordingService from "@/lib/services/recordingService";
+import * as learningProfileService from "@/lib/services/learningProfileService";
 import { runAction } from "@/lib/actions/result";
 
 // Thin adapters for the lesson player. Inputs are plain objects; the service validates
@@ -51,4 +52,15 @@ export async function deleteRecordingAction(input) {
     const actor = await requireUser();
     return recordingService.deleteOwnRecording(actor, input);
   });
+}
+
+// Onboarding (signed-in learners): goal and starting module, saved on the account.
+// Guests keep the same choices in their browser.
+export async function saveLearningProfileAction(input) {
+  const result = await runAction("learning.saveProfile", async () => {
+    const actor = await requireUser();
+    return learningProfileService.saveLearningProfile(actor, input);
+  });
+  if (result.ok) refresh();
+  return result;
 }

@@ -3,6 +3,7 @@
 import { useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MEDIA_SOURCE_LABELS } from "@/components/admin/media/labels";
+import { buttonClass } from "@/components/ui/button";
 
 // Uploads one audio or image file to the admin media route (raw body, so the byte limit
 // and the signature check run on the server before anything is stored). XMLHttpRequest is
@@ -175,7 +176,7 @@ export default function MediaUploadForm({ replaceId = null, replaceKind = null, 
         </div>
       )}
       <div className="flex flex-wrap items-center gap-3">
-        <button type="submit" disabled={busy} className="inline-flex h-9 items-center rounded-lg bg-brand-600 px-4 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60">
+        <button type="submit" disabled={busy} className={buttonClass({ variant: "primary" })}>
           {busy ? "Uploading…" : replaceId ? "Replace file" : "Upload"}
         </button>
         {busy && (

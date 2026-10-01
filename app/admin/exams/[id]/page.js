@@ -31,7 +31,7 @@ export default async function EditExamPage({ params, searchParams }) {
         </span>
       }
     >
-      <section aria-label="Publish readiness" className="mb-6 rounded-xl border border-line bg-surface p-4 text-sm" data-testid="exam-readiness">
+      <section aria-label="Publish readiness" className="mb-6 rounded-lg border border-line bg-surface px-4 py-3 text-[13px] shadow-xs" data-testid="exam-readiness">
         {checks.ready ? (
           <p className="text-success-700">Ready to publish: every exercise is published and scored automatically.</p>
         ) : (

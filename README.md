@@ -15,7 +15,7 @@ ADMIN_EMAIL=you@example.com ADMIN_PASSWORD='at-least-10-chars' bun run create-ad
 bun run dev
 ```
 
-Open http://localhost:3000. Admins create and edit levels, modules, lessons (block composer), vocabulary, grammar topics and exercises in `/admin` (see [docs/CMS.md](docs/CMS.md)). Learners only see content after an admin reviews, approves and publishes it there (each module has a review page with bulk steps). In development, audio that hasn't been generated plays with the browser voice. In production it shows as unavailable, and listening exercises can't be published until their audio exists: generated TTS, or a recording uploaded in `/admin/media` and attached to the exercise.
+Open http://localhost:3000. Learners can start right away without an account (progress then stays in their browser); an account keeps it. Admins create and edit levels, modules, lessons (block composer), vocabulary, grammar topics and exercises in `/admin` (see [docs/CMS.md](docs/CMS.md)). Learners only see content after an admin reviews, approves and publishes it there (each module has a review page with bulk steps). In development, audio that hasn't been generated plays with the browser voice. In production it shows as unavailable, and listening exercises can't be published until their audio exists: generated TTS, or a recording uploaded in `/admin/media` and attached to the exercise.
 
 ## Scripts
 
@@ -33,7 +33,7 @@ Open http://localhost:3000. Admins create and edit levels, modules, lessons (blo
 | `bun run audio:generate` | Offline German TTS for all curriculum audio cues (`-- --dry-run` lists what is missing; `-- --voices-verified` after the smoke test; `-- --prune` removes unused clips). Needs `TTS_PROVIDER` and a provider key in your shell, never on Vercel |
 | `bun run audio:verify` | Check generated audio against the content: missing/orphan/corrupt/mismatched clips |
 | `bun run create-admin` | Create an admin or promote an existing user (`--reset-password` to replace the password) |
-| `bun run content:check` | Read-only pre-publish report for a module (audio, dependencies, lifecycle, provenance) |
+| `bun run content:check` | Read-only pre-publish report for a module (audio, dependencies, lifecycle, provenance); `-- --all` for the whole level's readiness, also at `/admin/readiness` |
 | `bun run content:fixture-publish` | Dev/test databases only: publish a module with **test-fixture** approvals (not a content review) |
 | `bun run media:cleanup` | Remove speaking recordings that were uploaded but never submitted (older than 24 h) |
 
@@ -47,6 +47,7 @@ The first E2E run needs the browser: `bunx playwright install chromium`.
 - [docs/REFERENCE-ANALYSIS.md](docs/REFERENCE-ANALYSIS.md): Goethe A1 exam structure and curriculum mapping
 - [docs/CURRICULUM-A1.md](docs/CURRICULUM-A1.md): the 12-module plan checked against the references, all 12 modules, reviewer checklist
 - [docs/EXAMS.md](docs/EXAMS.md): the exam engine (model, attempts, scoring, review policies, admin, preview, security)
+- [docs/LEARNER.md](docs/LEARNER.md): the learner journey, guest vs. signed-in learning, learner state, every learner-facing metric, review, today's plan, Goethe Prep, onboarding
 - [docs/PHASE-0-ARCHITECTURE.md](docs/PHASE-0-ARCHITECTURE.md): original audit and proposal
 
 Reference PDFs in `docs/` are copyrighted and for local reference only. New PDFs are gitignored; the existing ones are still tracked from commit `e065d05`.

@@ -7,12 +7,13 @@ import SubmitButton from "@/components/ui/SubmitButton";
 import Alert from "@/components/ui/Alert";
 import { EXPLANATION_LOCALES, LOCALE_LABELS } from "@/lib/i18n/locales";
 
-export default function RegisterForm() {
+export default function RegisterForm({ next = null }) {
   const [state, formAction] = useActionState(registerAction, null);
   const errors = state?.fieldErrors ?? {};
 
   return (
     <form action={formAction} className="flex flex-col gap-4" noValidate>
+      <input type="hidden" name="next" value={next ?? ""} />
       {state && !state.ok && <Alert tone="error">{state.message}</Alert>}
       <FormField
         label="Name"

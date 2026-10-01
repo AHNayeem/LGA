@@ -26,7 +26,7 @@ export default async function LessonPreviewPage({ params, searchParams }) {
 
   return (
     // The admin layout already pads the page; LessonView brings its own learner spacing.
-    <div className="-mx-4 -my-8">
+    <div className="-mx-4 -mb-10 -mt-6 sm:-mx-6 lg:-mx-8">
       <LessonView
         data={data}
         locale={admin.uiLanguage ?? "en"}
@@ -38,7 +38,7 @@ export default async function LessonPreviewPage({ params, searchParams }) {
         exitLabel="Back to the editor"
         unavailableMessage="Learners would see this lesson as unavailable: it has no blocks yet, or a linked item no longer exists."
         banner={<PreviewBanner status={data.preview} editorHref={editorHref} />}
-        preview
+        mode="preview"
       />
     </div>
   );

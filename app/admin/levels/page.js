@@ -5,6 +5,7 @@ import { editHref, listHref, newHref } from "@/lib/content/adminSections";
 import { pickText } from "@/lib/i18n/locales";
 import { ButtonLink, ContentTable, FilterBar, PageHeader, Pagination, PUBLISH_FILTER, REVIEW_FILTER, StatusCell } from "@/components/admin/list";
 import LifecycleControls from "@/components/admin/LifecycleControls";
+import BulkActionBar from "@/components/admin/BulkSelection";
 
 export const metadata = { title: "Levels" };
 
@@ -17,7 +18,7 @@ export default async function LevelsPage({ searchParams }) {
         crumbs={[{ href: "/admin", label: "Admin" }]}
         title="Levels"
         description="CEFR levels and their mastery thresholds. Modules refer to a level by its code."
-        actions={<ButtonLink href={newHref("levels")}>New level</ButtonLink>}
+        actions={<ButtonLink icon="plus" href={newHref("levels")}>New level</ButtonLink>}
       />
       <FilterBar
         action="/admin/levels"
@@ -28,15 +29,17 @@ export default async function LevelsPage({ searchParams }) {
           { name: "publish", label: "Visibility", type: "select", options: PUBLISH_FILTER },
         ]}
       />
+      <BulkActionBar formId="bulk-levels" kind="levels" />
       <ContentTable
         items={list.items}
+        select={{ formId: "bulk-levels", label: (l) => l.code }}
         empty="No levels match. Run bun run seed to create the level structure."
         columns={[
           { header: "Code", cell: (l) => <span className="font-semibold">{l.code}</span> },
           {
             header: "Title",
             cell: (l) => (
-              <Link href={editHref("levels", l.id)} className="font-medium text-brand-700 hover:underline" lang="de">
+              <Link href={editHref("levels", l.id)} className="font-medium text-ink hover:text-brand-700 hover:underline" lang="de">
                 {pickText(l.title, "de").text}
               </Link>
             ),

@@ -9,7 +9,9 @@
   --color-surface: #ffffff;
   --color-ink: #1c1d1f;
   --color-ink-muted: #5b5f66;
+  --color-ink-subtle: #8a8d93; /* icons and decoration only: below text contrast */
   --color-line: #e3e3de;
+  --color-line-strong: #cfcfc8;
 
   --color-brand-50: #eef4ff;
   --color-brand-100: #dbe6fe;

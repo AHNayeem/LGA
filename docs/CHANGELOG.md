@@ -2,6 +2,72 @@
 
 Newest first. Details for each phase are in the linked documents.
 
+## 2026-10-01: Content readiness, learner QA, Goethe Prep depth, production checks
+See [CURRICULUM-A1.md](CURRICULUM-A1.md) §2c, [LEARNER.md](LEARNER.md) and [EXAMS.md](EXAMS.md). No content was approved, published or changed; no curriculum text was written.
+- **Curriculum readiness report** (`readinessService.checkLevelReadiness`): `bun run content:check -- --all` and `/admin/readiness` (read-only; not in the admin navigation yet).
+  - Per lesson: live for learners or not, plus one state: blocked, needs audio, needs review, ready.
+  - Checked on the stored content: broken and archived references, duplicate block keys, schema, answer keys, recordings and images, Goethe links (existence, one part, matching skill), lesson and module order, published levels and modules that learners see empty, the "Continue" sequence, and the exams.
+  - The open QA findings are machine-readable (`content/curriculum/a1/review-findings.js`) and shown on the lessons and exam they affect.
+- **Fixes found by the checks:**
+  - Batch lookups stopped at 500 documents, fewer than A1's 622 words: a fully published level would have hidden lessons. Now bounded by the ids asked for.
+  - The level's lessons are read page by page (the cap was 100).
+  - "Next lesson" skips lessons that are published but not fully available.
+  - "Level complete" no longer waits for modules with no published lesson yet, and "N of M modules" counts only modules learners can complete.
+- **Learner QA:**
+  - Guest state is validated field by field and size-capped; corrupted storage no longer breaks a page.
+  - Exam drafts are kept in versioned `localStorage` (`lib/exams/draft.js`) and survive closing the browser. Guests keep their start time, so the clock doesn't restart; an attempt whose time ran out while away is discarded unscored; the overview offers "Continue your practice exam".
+  - An ended session shows "Sign in again", which returns to the same page.
+  - Learner routes have a loading state.
+  - The lesson result no longer says "Almost there" for a lesson not started; weak skills say how many exercises they rest on.
+- **Goethe Prep:**
+  - What each Teil of a part asks, from the published format (reference metadata; `bun run seed -- --update-references` for existing databases).
+  - What LGA practises and what not: Schreiben Teil 2 and Sprechen with a partner are stated as not practised.
+  - Evidence per part (fully right, to practise again, lessons, latest exam result).
+  - One suggested exercise with its reason, by fixed rules.
+  - A way back from the exercise to the part (`?from=goethe-<part>`).
+- **Tests:**
+  - unit: `continuation`, `exam-draft`, more cases in `journey` and `curriculum-modules` (Goethe links, QA findings resolve)
+  - integration: `readiness`
+  - E2E: `journeys` (review retry, exam persistence and expiry, Goethe return path, corrupted storage, session expiry, slow server) and `readiness`
+
+## 2026-09-30: Bulk selection in admin lists
+- Every admin list (levels, modules, lessons, exercises, grammar, vocabulary, exams, review queue, media) and the module review page has row checkboxes, "select all on this page" and an action bar.
+- Content steps: Mark reviewed, Approve, Publish, Unpublish, Back to draft, Archive, Restore. Media: Archive, Restore.
+- Each selected item goes through the normal per-item rules (permissions, no skipped steps, publish readiness). Items in the wrong state are skipped; blocked ones are listed with the reason.
+- At most 200 items per step. Service: `contentService.bulkSelectionTransition`, `mediaService.bulkSetCurriculumMediaStatus`. UI: `components/admin/BulkSelection.js`.
+
+## 2026-09-30: Learner experience and guest learning
+See [LEARNER.md](LEARNER.md).
+- **Learning without an account.** Every learner page is open to guests: dashboard, lessons, review, Goethe Prep, practice exams and onboarding. Only `/admin` and stored exam attempts need a session.
+  - Guests get the same content and the same server grading. Nothing is stored for them; the only write is a per-IP rate-limit counter.
+  - Their progress is kept in the browser (`localStorage`, versioned).
+  - Curriculum audio and images play for guests; private recordings stay owner-only.
+- **One engine, two stores.** `lib/learning/journey.js` holds every learner-facing calculation as pure functions of the level structure and the learner state.
+  - The server runs them for signed-in learners, the browser for guests.
+  - Module summaries in `curriculumService` now use them too, with unchanged output.
+- **Learner home** (`/dashboard`):
+  - one primary action ("Continue: Modul X · Lesson")
+  - today's plan (deterministic)
+  - lessons completed and skills across the level
+  - review and Goethe Prep summaries
+  - modules
+- **Navigation:** Learn · Review · Goethe Prep · Account. On phones this is a bottom tab bar, hidden inside lessons and running exams.
+- **Lesson result** (`?view=result`): points, what to practise again, the next lesson. Finished modules show "Module complete!" with the next module.
+- **Review** (`/review`): words due and exercises to practise again, grouped by lesson with its grammar, plus weak skills. Each item links back to the exercise.
+- **Goethe Prep** (`/goethe/<level>`, `/<part>`): the lesson exercises linked to each exam part through `refs`, with practised count and score. Practice exam results link each section to its part.
+- **Onboarding** (`/start`): goal and starting module; no placement test. Stored on `users.learningProfile`, or in the browser for guests.
+- **Guest nudge:** "Create a free account to keep your progress" (non-blocking). Registration now honours `?next=`.
+- Skills show "% right" (attempted exercises) next to progress towards the level target (unattempted exercises count as 0). "Needs work" only uses attempted exercises.
+- New files:
+  - `lib/learning/{state,journey,guestStore,profile}.js`
+  - `lib/services/{journeyService,learningProfileService}.js`
+  - `lib/security/guestRateLimit.js`
+  - `app/actions/guest.js`
+  - `components/journey/*`, `components/learn/{GuestLesson,LessonResult,SaveProgressNudge}.js`, `components/exams/GuestExam.js`, `components/layout/LearnerNav.js`
+- Not built (decisions 2026-09-30): activity streak; moving guest progress into a new account.
+
+**Tests:** `tests/unit/journey.test.js`, `tests/integration/guest-learning.test.js` and `tests/e2e/guest.spec.js` are new. `auth`, `learner` and `speaking` E2E specs were updated for open learning and the lesson result.
+
 ## 2026-09-30: Bulk vocabulary import
 See [CMS.md](CMS.md#cms-bulk-vocabulary-import).
 - New page `/admin/vocabulary/import`: up to 5,000 words per import, from a CSV file (UTF-8, comma or semicolon separated) or rows pasted from a spreadsheet. A CSV template can be downloaded.

@@ -6,6 +6,7 @@ import { PARTS_OF_SPEECH } from "@/lib/content/constants";
 import { pickText } from "@/lib/i18n/locales";
 import { ButtonLink, ContentTable, FilterBar, LEVEL_FILTER, PageHeader, Pagination, PUBLISH_FILTER, REVIEW_FILTER, StatusCell } from "@/components/admin/list";
 import LifecycleControls from "@/components/admin/LifecycleControls";
+import BulkActionBar from "@/components/admin/BulkSelection";
 
 export const metadata = { title: "Vocabulary" };
 
@@ -20,10 +21,10 @@ export default async function VocabularyPage({ searchParams }) {
         description="The word library. Words are reusable: lessons link to them from vocabulary blocks."
         actions={
           <>
-            <ButtonLink href="/admin/vocabulary/import" variant="secondary">
+            <ButtonLink href="/admin/vocabulary/import" variant="secondary" icon="upload">
               Import words
             </ButtonLink>
-            <ButtonLink href={newHref("vocabulary", list.query.level ? { level: list.query.level } : undefined)}>New word</ButtonLink>
+            <ButtonLink icon="plus" href={newHref("vocabulary", list.query.level ? { level: list.query.level } : undefined)}>New word</ButtonLink>
           </>
         }
       />
@@ -39,15 +40,17 @@ export default async function VocabularyPage({ searchParams }) {
           { name: "publish", label: "Visibility", type: "select", options: PUBLISH_FILTER },
         ]}
       />
+      <BulkActionBar formId="bulk-vocabulary" kind="vocabulary" />
       <ContentTable
         items={list.items}
+        select={{ formId: "bulk-vocabulary", label: (v) => v.slug }}
         empty="No words match these filters."
         columns={[
           {
             header: "Word",
             cell: (v) => (
               <>
-                <Link href={editHref("vocabulary", v.id)} className="font-medium text-brand-700 hover:underline" lang="de">
+                <Link href={editHref("vocabulary", v.id)} className="font-medium text-ink hover:text-brand-700 hover:underline" lang="de">
                   {wordForm(v)}
                 </Link>
                 {v.plural && (

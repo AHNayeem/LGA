@@ -1,10 +1,12 @@
 import Link from "next/link";
-import { requireUserPage } from "@/lib/auth/dal";
-import { getLearnerExam } from "@/lib/services/examService";
+import { getCurrentUser } from "@/lib/auth/dal";
+import { getGuestExamPaper, getLearnerExam } from "@/lib/services/examService";
+import { goethePracticeLinks as practiceLinks } from "@/lib/services/journeyService";
 import { orNotFound } from "@/lib/pages";
 import LocalizedText from "@/components/ui/LocalizedText";
 import AiContentNotice from "@/components/learn/AiContentNotice";
 import StartExamButton from "@/components/exams/StartExamButton";
+import { GuestExamPlayer, GuestExamStart } from "@/components/exams/GuestExam";
 
 export const metadata = { title: "Exam" };
 
@@ -16,18 +18,40 @@ const POLICY = {
   full: "After submitting you see your scores, the correct answers and explanations.",
 };
 
-export default async function ExamPage({ params }) {
+// Exam overview for signed-in learners (attempts stored, history) and guests (practice in
+// the browser: ?take=1 opens the paper, results stay on the device).
+export default async function ExamPage({ params, searchParams }) {
   const { level, exam: examSlug } = await params;
-  const user = await requireUserPage(`/exams/${level}/${examSlug}`);
-  const locale = user.uiLanguage ?? "en";
+  const { take } = await searchParams;
+  const overviewHref = `/exams/${level}/${examSlug}`;
+  const user = await getCurrentUser();
+  const locale = user?.uiLanguage ?? "en";
   const { exam, openAttemptId, history } = await orNotFound(getLearnerExam(user, { level, exam: examSlug }));
   const levelHref = `/learn/${exam.levelCode.toLowerCase()}`;
+
+  if (!user && take === "1") {
+    const [{ examId, version, paper }, practice] = await Promise.all([orNotFound(getGuestExamPaper({ level, exam: examSlug })), practiceLinks(exam.levelCode)]);
+    return (
+      <div className="mx-auto w-full max-w-6xl px-4 py-6">
+        <nav aria-label="Breadcrumb" className="text-sm text-ink-muted">
+          <Link href={overviewHref} className="hover:underline">
+            Back to the exam overview
+          </Link>
+        </nav>
+        <LocalizedText as="h1" text={exam.title} prefer="de" className="mt-1 text-2xl font-semibold tracking-tight" />
+        {exam.aiGenerated && <AiContentNotice className="mt-3" />}
+        <div className="mt-6">
+          <GuestExamPlayer guest={{ examId, version }} paper={paper} locale={locale} overviewHref={overviewHref} practice={practice} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto w-full max-w-3xl px-4 py-8">
       <nav aria-label="Breadcrumb" className="text-sm text-ink-muted">
-        <Link href="/dashboard" className="hover:underline">
-          Dashboard
+        <Link href={`/goethe/${exam.levelCode.toLowerCase()}`} className="hover:underline">
+          Goethe Prep
         </Link>{" "}
         /{" "}
         <Link href={levelHref} className="hover:underline">
@@ -59,16 +83,21 @@ export default async function ExamPage({ params }) {
               : "There is no time limit."}
           </li>
           <li>You can move between the tasks and change your answers until you submit. Unanswered questions score 0 points.</li>
-          <li>Pass mark: {pct(exam.passThreshold)} of all points. This is the app&apos;s practice target, not an official Goethe pass mark.</li>
+          <li>LGA practice target: {pct(exam.passThreshold)} of all points. This is the app&apos;s own target, not an official Goethe pass mark, and no prediction of an official result.</li>
           <li>{POLICY[exam.reviewPolicy]}</li>
-          <li>Exam results are kept separately: they don&apos;t change your lesson progress or skill mastery.</li>
+          <li>Exam results are kept separately: they don&apos;t change your lesson progress or skill scores.</li>
         </ul>
         {exam.instructions && <LocalizedText as="p" text={exam.instructions} prefer={locale} className="mt-3 whitespace-pre-line text-sm" />}
         <div className="mt-5">
-          <StartExamButton examId={exam.id} resume={Boolean(openAttemptId)} durationMinutes={exam.durationMinutes} />
+          {user ? (
+            <StartExamButton examId={exam.id} resume={Boolean(openAttemptId)} durationMinutes={exam.durationMinutes} />
+          ) : (
+            <GuestExamStart examId={exam.id} version={exam.version} takeHref={`${overviewHref}?take=1`} durationMinutes={exam.durationMinutes} />
+          )}
         </div>
       </section>
 
+      {user && (
       <section aria-labelledby="history-heading" className="mt-8">
         <h2 id="history-heading" className="text-lg font-semibold">
           Your attempts
@@ -98,6 +127,7 @@ export default async function ExamPage({ params }) {
           </ul>
         )}
       </section>
+      )}
     </div>
   );
 }

@@ -22,7 +22,7 @@ export default async function ExamPreviewPage({ params }) {
 
   return (
     <div className="space-y-6">
-      <section aria-label="Draft preview" data-testid="preview-banner" className="rounded-xl border-2 border-dashed border-warning-700/50 bg-warning-50 p-4 text-sm">
+      <section aria-label="Draft preview" data-testid="preview-banner" className="rounded-lg border border-dashed border-warning-700/50 bg-warning-50 px-4 py-3 text-[13px]">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-md bg-warning-700 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-white">Exam preview</span>
@@ -45,11 +45,11 @@ export default async function ExamPreviewPage({ params }) {
         </p>
       </section>
 
-      <LocalizedText as="h1" text={data.exam.title} prefer="de" className="text-2xl font-semibold tracking-tight" />
+      <LocalizedText as="h1" text={data.exam.title} prefer="de" className="text-xl font-semibold tracking-tight" />
       {data.questionCount > 0 ? (
         <ExamPlayer examId={data.id} paper={data.paper} locale={admin.uiLanguage ?? "en"} preview learnerPolicy={data.exam.reviewPolicy} />
       ) : (
-        <p className="rounded-xl border border-dashed border-line bg-surface p-4 text-sm text-ink-muted">This exam has no questions yet. Add exercises in the editor.</p>
+        <p className="rounded-lg border border-dashed border-line-strong bg-surface p-4 text-sm text-ink-muted">This exam has no questions yet. Add exercises in the editor.</p>
       )}
     </div>
   );

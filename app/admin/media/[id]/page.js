@@ -41,7 +41,7 @@ export default async function MediaDetailPage({ params, searchParams }) {
         </div>
       )}
 
-      <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-3 rounded-xl border border-line bg-surface p-4 text-sm">
+      <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-3 rounded-lg border border-line bg-surface p-4 shadow-xs text-sm">
         {isImage ? (
           <ImagePreview id={media.id} alt={media.alt ?? ""} className="max-h-64 w-full max-w-md" />
         ) : (

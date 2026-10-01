@@ -57,11 +57,61 @@ const grammatikAktivA1 = [
 // Goethe-Zertifikat A1: Start Deutsch 1 — structure from Modellsatz (8. Aufl., 02/2024)
 // and Übungssatz 02 (6. Aufl., 02/2024). Points are raw points as documented there;
 // Sprechen maximum and overall pass mark are not documented in those PDFs.
+// Structure of the Goethe-Zertifikat A1: Start Deutsch 1 as documented in the official
+// papers (docs/REFERENCE-ANALYSIS.md §1). `teile`: what each Teil asks, in plain words;
+// informational only, no exam content.
 const goetheSections = [
-  { key: "hoeren", title: "Hören", minutes: 20, parts: 3, items: 15, maxPoints: 15 },
-  { key: "lesen", title: "Lesen", minutes: 25, parts: 3, items: 15, maxPoints: 15 },
-  { key: "schreiben", title: "Schreiben", minutes: 20, parts: 2, items: 2, maxPoints: 15 },
-  { key: "sprechen", title: "Sprechen", minutes: 15, parts: 3, items: 3, maxPoints: null },
+  {
+    key: "hoeren",
+    title: "Hören",
+    minutes: 20,
+    parts: 3,
+    items: 15,
+    maxPoints: 15,
+    teile: [
+      "Short everyday conversations: 6 questions, a, b or c. You hear each conversation twice.",
+      "Announcements (station, airport, shop): 4 questions, richtig or falsch. You hear each announcement once.",
+      "Phone messages: 5 questions, a, b or c. You hear each message twice.",
+    ],
+  },
+  {
+    key: "lesen",
+    title: "Lesen",
+    minutes: 25,
+    parts: 3,
+    items: 15,
+    maxPoints: 15,
+    teile: [
+      "Two short letters or e-mails: 5 questions, richtig or falsch.",
+      "Where do you find the information? Choose between two ads or web pages (a or b): 5 questions.",
+      "Signs and notices: 5 questions, richtig or falsch.",
+    ],
+  },
+  {
+    key: "schreiben",
+    title: "Schreiben",
+    minutes: 20,
+    parts: 2,
+    items: 2,
+    maxPoints: 15,
+    teile: [
+      "Complete a form with 5 missing details, taken from a short text (5 points).",
+      "Write a short message of about 30 words that covers 3 given points (10 points).",
+    ],
+  },
+  {
+    key: "sprechen",
+    title: "Sprechen",
+    minutes: 15,
+    parts: 3,
+    items: 3,
+    maxPoints: null,
+    teile: [
+      "Introduce yourself from a keyword card (name, age, country, home town, languages, job, hobby), then spell something and say a number.",
+      "Ask and answer questions on a theme, using word cards.",
+      "Make a request from a picture card and respond to a partner's request.",
+    ],
+  },
 ];
 
 export const REFERENCES = [
@@ -112,6 +162,7 @@ export const REFERENCES = [
         parts: s.parts,
         items: s.items,
         ...(s.maxPoints == null ? { maxPointsDocumented: false } : { maxPoints: s.maxPoints }),
+        ...Object.fromEntries(s.teile.map((t, i) => [`teil${i + 1}`, t])),
       },
     })),
   },

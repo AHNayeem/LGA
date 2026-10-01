@@ -4,6 +4,7 @@ import { listCurriculumMedia } from "@/lib/services/mediaService";
 import { ButtonLink, ContentTable, FilterBar, PageHeader, Pagination } from "@/components/admin/list";
 import { AudioPreview, ImagePreview, MediaStatusBadge, mediaMeta, sourceLabel } from "@/components/admin/media/labels";
 import Alert from "@/components/ui/Alert";
+import BulkActionBar, { MEDIA_STEPS } from "@/components/admin/BulkSelection";
 
 export const metadata = { title: "Media" };
 
@@ -41,7 +42,7 @@ export default async function MediaPage({ searchParams }) {
         crumbs={[{ href: "/admin", label: "Admin" }]}
         title="Media"
         description="Curriculum audio and images: recordings and images uploaded here, and the generated TTS clips. Attach a recording to a listening exercise to replace its TTS; without one, the exercise plays generated TTS. Attach images to intro blocks, words and exercise stimuli in their editors. Learner recordings are never listed here."
-        actions={<ButtonLink href="/admin/media/new">Upload media</ButtonLink>}
+        actions={<ButtonLink icon="upload" href="/admin/media/new">Upload media</ButtonLink>}
       />
       {sp?.deleted === "1" && (
         <div className="mt-4">
@@ -59,15 +60,17 @@ export default async function MediaPage({ searchParams }) {
           { name: "usage", label: "Usage", type: "select", options: USAGE_FILTER },
         ]}
       />
+      <BulkActionBar formId="bulk-media" target="media" steps={MEDIA_STEPS} />
       <ContentTable
         items={list.items}
+        select={{ formId: "bulk-media", can: (m) => m.editable, label: (m) => m.title ?? m.originalName ?? m.id }}
         empty={filtered ? "No media match these filters." : "No uploads yet. Upload a recording or an image, then attach it to content."}
         columns={[
           {
             header: "Media",
             cell: (m) => (
               <>
-                <Link href={`/admin/media/${m.id}`} className="font-medium text-brand-700 hover:underline" lang="de">
+                <Link href={`/admin/media/${m.id}`} className="font-medium text-ink hover:text-brand-700 hover:underline" lang="de">
                   {m.title ?? m.transcript?.slice(0, 80) ?? m.id}
                 </Link>
                 <p className="text-xs text-ink-muted">

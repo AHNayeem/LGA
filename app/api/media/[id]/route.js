@@ -12,8 +12,9 @@ const CACHE = { private: "private, no-store", linked: "private, no-cache", curri
 export async function GET(request, { params }) {
   const { id } = await params;
   try {
+    // Guests (null) may read published curriculum media; canReadMedia keeps private
+    // recordings to their owner. Missing and forbidden are both 404.
     const user = await getCurrentUser();
-    if (!user) return new Response("Unauthorized", { status: 401 });
     const result = await openMedia(user, id);
     if (result.redirect) {
       return Response.redirect(new URL(result.redirect, request.url), 302);

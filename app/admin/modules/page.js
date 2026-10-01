@@ -5,6 +5,7 @@ import { editHref, listHref, newHref } from "@/lib/content/adminSections";
 import { pickText } from "@/lib/i18n/locales";
 import { ButtonLink, ContentTable, FilterBar, LEVEL_FILTER, PageHeader, Pagination, PUBLISH_FILTER, REVIEW_FILTER, StatusCell } from "@/components/admin/list";
 import LifecycleControls from "@/components/admin/LifecycleControls";
+import BulkActionBar from "@/components/admin/BulkSelection";
 
 export const metadata = { title: "Modules" };
 
@@ -17,7 +18,7 @@ export default async function ModulesPage({ searchParams }) {
         crumbs={[{ href: "/admin", label: "Admin" }]}
         title="Modules"
         description="Each module belongs to a level and contains ordered lessons."
-        actions={<ButtonLink href={newHref("modules", list.query.level ? { level: list.query.level } : undefined)}>New module</ButtonLink>}
+        actions={<ButtonLink icon="plus" href={newHref("modules", list.query.level ? { level: list.query.level } : undefined)}>New module</ButtonLink>}
       />
       <FilterBar
         action="/admin/modules"
@@ -29,15 +30,17 @@ export default async function ModulesPage({ searchParams }) {
           { name: "publish", label: "Visibility", type: "select", options: PUBLISH_FILTER },
         ]}
       />
+      <BulkActionBar formId="bulk-modules" kind="modules" />
       <ContentTable
         items={list.items}
+        select={{ formId: "bulk-modules", label: (m) => m.slug }}
         empty="No modules match these filters."
         columns={[
           {
             header: "Module",
             cell: (m) => (
               <>
-                <Link href={`/admin/modules/${m.id}`} className="font-medium text-brand-700 hover:underline">
+                <Link href={`/admin/modules/${m.id}`} className="font-medium text-ink hover:text-brand-700 hover:underline">
                   <span className="font-semibold">{m.levelCode}</span> · <span lang="de">{pickText(m.title, "de").text}</span>
                 </Link>
                 <p className="font-mono text-xs text-ink-muted">{m.slug}</p>

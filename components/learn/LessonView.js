@@ -9,6 +9,8 @@ import Flashcards from "@/components/learn/Flashcards";
 import ExercisePlayer from "@/components/exercises/ExercisePlayer";
 import AiContentNotice from "@/components/learn/AiContentNotice";
 import ContentImage from "@/components/learn/ContentImage";
+import LessonResult from "@/components/learn/LessonResult";
+import { lessonBlocksOf } from "@/lib/learning/journey";
 
 function WordList({ cards, locale }) {
   return (
@@ -29,14 +31,20 @@ function WordList({ cards, locale }) {
   );
 }
 
-// The lesson player, shared by the learner lesson page and the CMS draft preview.
-// `data` comes from getLearnerLesson or getLessonPreview (same shape). With `preview`,
-// every interactive step runs read-only: nothing is recorded for the viewer.
+// The lesson player, shared by the learner lesson page (signed in or guest) and the CMS
+// draft preview. `data` comes from getLearnerLesson or getLessonPreview (same shape).
 //
+//   mode          "user" (stored on the server) | "guest" (kept in this browser, data
+//                 already carries the guest's state, see GuestLesson) | "preview" (CMS,
+//                 nothing is recorded)
 //   currentKey    the block to show (the page resolves and redirects to it)
 //   hrefFor(key)  URL of a step;  exitHref/exitLabel: where the last step leads
+//   resultHref    the lesson result (after the last step); preview has none
+//   showResult    render the lesson result instead of a step
 //   levelHref / moduleHref  breadcrumb links (null renders plain text)
 //   banner        optional node above the header (the preview banner)
+//   returnLink    { href, label }: where the learner came from (Goethe Prep), offered above
+//                 the step and after an exercise's result
 export default function LessonView({
   data,
   locale,
@@ -48,7 +56,10 @@ export default function LessonView({
   exitLabel,
   unavailableMessage,
   banner = null,
-  preview = false,
+  mode = "user",
+  resultHref = null,
+  showResult = false,
+  returnLink = null,
 }) {
   const crumb = (href, children) =>
     href ? (
@@ -84,15 +95,23 @@ export default function LessonView({
   }
 
   const { blocks } = data;
-  const current = blocks.find((b) => b.key === currentKey) ?? blocks[0];
-  const idx = blocks.indexOf(current);
+  const lessonBlocks = mode === "guest" ? lessonBlocksOf(data) : null;
+  const current = showResult ? null : (blocks.find((b) => b.key === currentKey) ?? blocks[0]);
+  const idx = current ? blocks.indexOf(current) : blocks.length;
   const next = blocks[idx + 1];
-  const nextHref = next ? hrefFor(next.key) : exitHref;
-  const nextLabel = next ? `Next: ${blockLabel(next)}` : exitLabel;
+  const nextHref = next ? hrefFor(next.key) : (resultHref ?? exitHref);
+  const nextLabel = next ? `Next: ${blockLabel(next)}` : resultHref ? "See your lesson result" : exitLabel;
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8">
       {banner}
+      {returnLink && (
+        <p className="mb-3 text-sm">
+          <Link href={returnLink.href} className="font-medium text-brand-700 hover:underline" data-testid="return-link">
+            ← {returnLink.label}
+          </Link>
+        </p>
+      )}
       {header}
       <div className="mt-4 max-w-md">
         <div className="flex justify-between text-sm text-ink-muted">
@@ -105,11 +124,15 @@ export default function LessonView({
       </div>
       {data.aiGenerated && <AiContentNotice className="mt-4 max-w-2xl" />}
 
-      {data.completion.complete && (
+      {data.completion.complete && !showResult && (
         <div className="mt-4">
           <Alert tone="success">
             Lesson complete!{" "}
-            {data.nextLesson ? (
+            {resultHref ? (
+              <Link href={resultHref} className="font-medium underline">
+                See your lesson result
+              </Link>
+            ) : data.nextLesson ? (
               <Link href={`${moduleHref}/${data.nextLesson.slug}`} className="font-medium underline">
                 Next lesson: <LocalizedText text={data.nextLesson.title} prefer="de" />
               </Link>
@@ -124,9 +147,14 @@ export default function LessonView({
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[16rem_1fr]">
         <aside className="min-w-0 lg:sticky lg:top-4 lg:self-start">
-          <LessonSteps blocks={blocks} currentKey={current.key} hrefFor={hrefFor} locale={locale} />
+          <LessonSteps blocks={blocks} currentKey={current?.key ?? null} hrefFor={hrefFor} locale={locale} resultHref={resultHref} showResult={showResult} />
         </aside>
 
+        {showResult ? (
+          <section aria-label="Lesson result" className="min-w-0">
+            <LessonResult data={data} locale={locale} hrefFor={hrefFor} moduleHref={moduleHref} mode={mode} selfHref={resultHref} />
+          </section>
+        ) : (
         <section aria-label={blockLabel(current)} className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
             Step {idx + 1} · {blockLabel(current)} {current.done && <span className="text-success-700">· done</span>}
@@ -136,14 +164,14 @@ export default function LessonView({
               <div className="space-y-6">
                 {current.image && <ContentImage image={current.image} locale={locale} className="max-w-prose" />}
                 <LocalizedText as="div" text={current.body} prefer={locale} className="max-w-prose whitespace-pre-line leading-relaxed" />
-                <ContinueButton lessonId={data.lesson.id} blockKey={current.key} nextHref={nextHref} label="Let's start" preview={preview} />
+                <ContinueButton lessonId={data.lesson.id} blockKey={current.key} nextHref={nextHref} label="Let's start" mode={mode} lessonBlocks={lessonBlocks} />
               </div>
             )}
 
             {current.type === "grammar" && (
               <div className="space-y-6">
                 <GrammarTopic grammar={current.grammar} locale={locale} />
-                <ContinueButton lessonId={data.lesson.id} blockKey={current.key} nextHref={nextHref} label="Got it – continue" preview={preview} />
+                <ContinueButton lessonId={data.lesson.id} blockKey={current.key} nextHref={nextHref} label="Got it – continue" mode={mode} lessonBlocks={lessonBlocks} />
               </div>
             )}
 
@@ -158,7 +186,8 @@ export default function LessonView({
                   lessonId={data.lesson.id}
                   blockKey={current.key}
                   nextHref={nextHref}
-                  preview={preview}
+                  learner={mode}
+                  lessonBlocks={lessonBlocks}
                 />
                 <WordList cards={current.cards} locale={locale} />
               </div>
@@ -175,11 +204,14 @@ export default function LessonView({
                 locale={locale}
                 nextHref={nextHref}
                 nextLabel={nextLabel}
-                preview={preview}
+                mode={mode}
+                lessonBlocks={lessonBlocks}
+                returnLink={returnLink}
               />
             )}
           </div>
         </section>
+        )}
       </div>
     </div>
   );

@@ -261,7 +261,7 @@ function ItemEditor({ item, index, count, onChange, onMove, onRemove, audio }) {
   const Fields = TYPE_FIELDS[item.type];
   const itemErrors = useFieldErrors(path);
   return (
-    <div className="rounded-xl border border-line bg-surface p-4" data-testid="exercise-item">
+    <div className="rounded-lg border border-line bg-surface p-4 shadow-xs" data-testid="exercise-item">
       <div className="flex flex-wrap items-end gap-2">
         <h3 className="mr-auto text-sm font-semibold">
           Item {index + 1} <span className="font-mono text-xs font-normal text-ink-muted">{item.id}</span>

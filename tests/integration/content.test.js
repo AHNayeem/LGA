@@ -5,7 +5,7 @@ import { seedLevels, seedReferences } from "@/lib/services/seedService";
 import { LEVELS } from "@/content/seed/levels";
 import { REFERENCES } from "@/content/seed/references";
 import { ROLES } from "@/lib/auth/roles";
-import { ConflictError, ForbiddenError } from "@/lib/errors";
+import { ConflictError, ForbiddenError, ValidationError } from "@/lib/errors";
 import { getDb } from "@/lib/db/client";
 
 setupTestDatabase();
@@ -86,6 +86,45 @@ describe("content lifecycle end-to-end", () => {
   });
 });
 
+describe("bulk selection", () => {
+  const make = (admin, n) =>
+    Promise.all(Array.from({ length: n }, (_, i) => content.createContent(admin, "modules", { ...moduleInput, slug: `bulk-${i}`, order: i + 1 })));
+
+  it("applies one step to the selected items only, skipping those in another state", async () => {
+    const admin = await createTestUser({ role: ROLES.ADMIN });
+    const [a, b, c] = await make(admin, 3);
+    await content.transitionReview(admin, "modules", { id: b.id, to: "reviewed" });
+
+    const reviewed = await content.bulkSelectionTransition(admin, "modules", [a.id, b.id], "review");
+    expect(reviewed).toMatchObject({ changed: 1, skipped: 1, failed: [] });
+
+    const approved = await content.bulkSelectionTransition(admin, "modules", [a.id, b.id, c.id], "approve");
+    expect(approved).toMatchObject({ changed: 2, skipped: 1 });
+    expect((await content.bulkSelectionTransition(admin, "modules", [a.id, b.id, c.id], "publish")).changed).toBe(2);
+    expect((await content.listPublishedModules("A1")).map((m) => m.slug).sort()).toEqual(["bulk-0", "bulk-1"]);
+
+    const archived = await content.bulkSelectionTransition(admin, "modules", [a.id, c.id], "archive");
+    expect(archived.changed).toBe(2);
+    expect((await content.bulkSelectionTransition(admin, "modules", [a.id, b.id], "restore")).changed).toBe(1);
+    expect((await content.bulkSelectionTransition(admin, "modules", [a.id, b.id], "draft")).changed).toBe(2);
+    expect(await content.listPublishedModules("A1")).toHaveLength(0);
+  });
+
+  it("reports missing ids and rejects bad input and non-admins", async () => {
+    const user = await createTestUser();
+    const admin = await createTestUser({ role: ROLES.ADMIN });
+    const [a] = await make(admin, 1);
+    const result = await content.bulkSelectionTransition(admin, "modules", [a.id, "000000000000000000000000"], "review");
+    expect(result.changed).toBe(1);
+    expect(result.failed).toHaveLength(1);
+
+    await expect(content.bulkSelectionTransition(user, "modules", [a.id], "review")).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(content.bulkSelectionTransition(admin, "modules", [], "review")).rejects.toBeInstanceOf(ValidationError);
+    await expect(content.bulkSelectionTransition(admin, "modules", [a.id], "delete")).rejects.toBeInstanceOf(ValidationError);
+    await expect(content.bulkSelectionTransition(admin, "users", [a.id], "review")).rejects.toBeInstanceOf(ValidationError);
+  });
+});
+
 describe("seeding", () => {
   it("seeds 6 levels as draft, idempotently", async () => {
     expect((await seedLevels(LEVELS)).inserted).toBe(6);
@@ -116,6 +155,7 @@ describe("seeding", () => {
     expect(chapters[0].title).toBe("Kapitel 1: Guten Tag!");
     expect(chapters.every((c) => c.sourceType === "reference_metadata")).toBe(true);
     const sprechen = await db.collection("references").findOne({ slug: "goethe-start-deutsch-1-sprechen" });
-    expect(sprechen.meta).toEqual({ minutes: 15, parts: 3, items: 3, maxPointsDocumented: false });
+    // Structure plus what each Teil asks (the Goethe part descriptions, 2026-10-01).
+    expect(sprechen.meta).toEqual({ minutes: 15, parts: 3, items: 3, maxPointsDocumented: false, teil1: expect.any(String), teil2: expect.any(String), teil3: expect.any(String) });
   });
 });

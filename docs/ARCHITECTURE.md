@@ -21,7 +21,8 @@ lib/db/*                       client singleton, collection names, index definit
 Rules:
 - Pages and components never import `lib/db` or repositories. They call services, which return serialised plain objects via `lib/db/serialize.js`.
 - **Authorisation is enforced in services** (`hasPermission(actor, …)`), and again at the page level by the DAL. This makes every entry point safe: Server Action, route handler, or script.
-- `proxy.js` only checks whether a session cookie exists, to redirect early. It never trusts the cookie and never touches the database.
+- `proxy.js` only checks whether a session cookie exists, to redirect early. It never trusts the cookie and never touches the database. Only `/admin` and `/exams/attempts/*` are redirected: learning pages are open to guests (see `LEARNER.md`).
+- **Guests** (no session) read published content through the same services with `actor = null`, and get exercises and practice exams graded without anything being stored (`gradeExerciseAsGuest`, `gradeExamAsGuest`, per-IP limit `GUEST_RATE_LIMITS`). Their learner state lives in their browser and is never read by the server. Learner writes still require a session.
 
 ## Authentication
 | Piece | File |
@@ -85,6 +86,8 @@ Hierarchy: `levels (code) → modules (levelCode, slug) → lessons (moduleId, s
 - **Test-fixture approvals.** To validate a module end to end on a dev/test database before a person has reviewed it, `bun run content:fixture-publish` (and the E2E seeding) approve with `approvalBasis: "test_fixture"`. This is **not** a content review: `/admin` shows "Test-fixture approval – not a genuine review" next to each such item, `content:check` warns about them, provenance stays `ai_generated`, and the script refuses to run with `NODE_ENV=production` or on a database whose name doesn't mark it as dev/test (`lib/config/databaseGuard.js`). Content released to real learners needs genuine human approvals.
 - **Learner disclosure.** Lessons and modules with any `ai_generated` content show "AI-assisted content, not yet reviewed by a native speaker." (`components/learn/AiContentNotice.js`). An in-app approval doesn't remove the notice, because it isn't a native-speaker review.
 - **Pre-publish report:** `bun run content:check -- --module a1/hallo` lists missing required audio per lesson (including the module test), published items depending on unpublished ones, lifecycle inconsistencies, provenance changes, approval basis and unreviewed Bangla. It is read-only and exits 1 on errors.
+- **Level readiness:** `bun run content:check -- --all` and `/admin/readiness` (not in the admin navigation yet) show `readinessService.checkLevelReadiness`: per lesson whether learners can open it and one readiness state (blocked, needs audio, needs review, ready), checked on the stored content: broken and archived references, schema, answer keys (`lib/exercises/answerKey.js`), media, Goethe links, order, empty published modules, open QA findings (`content/curriculum/a1/review-findings.js`) and the "Continue" sequence (`lib/learning/continuation.js`). Read-only, content reviewers only. See `CURRICULUM-A1.md` §2c.
+- **Batch lookups** (`findManyByIds`) return every document asked for; they used to stop at 500, fewer than A1's words, which would have hidden lessons of a fully published level. Callers build the id lists from content or from bounded, validated input. The level's lessons are read page by page.
 - **Admin authoring (CMS Phase 1, `CMS.md`).** `/admin` edits every content type through `contentService.saveContent` → `createContent`/`updateContent`, so the schemas, permissions, version checks and edit rule above apply unchanged. Writes also check relationships: a lesson's module and its block references (right collection, no word twice per block) must exist, and a level's code is immutable. Optional fields removed in an editor are cleared (`null`). Archiving (`publishStatus: archived`) is the soft delete.
 - **Bulk vocabulary import** (`/admin/vocabulary/import`, `CMS.md`) validates every row with `vocabularySchema` on the server (for the preview, and again for the import) and inserts the words as drafts with the normal initial lifecycle. A level + slug that is already used is an error; the same word (level, article, lemma) is a warning.
 - **Bulk module review** (`bulkModuleTransition`, `/admin/modules/[id]`) applies one step (review / approve / publish) to every item of a module that is in the matching state. It runs through the same per-item functions, so no step can be skipped and dependencies are published first.
@@ -110,9 +113,9 @@ Hierarchy: `levels (code) → modules (levelCode, slug) → lessons (moduleId, s
   - curriculum images (`CURRICULUM_IMAGE_MAX_BYTES`, 2 MB) accept PNG, JPEG, WebP and GIF, never SVG. The extension must match, the header must parse, and the image may be at most 8000 px per side and 40 megapixels (`lib/media/imageInfo.js`). See [CMS.md](CMS.md#cms-phase-5-curriculum-images)
 - Clients only ever see `publicMediaView(asset)` = `{ id, kind, mime, size, durationSec, createdAt }`. Storage driver, key, GridFS ids and owner never leave the server.
 - Access (`canReadMedia`):
-  - `curriculum` assets are readable by any signed-in user
+  - `curriculum` assets (generated TTS) are readable by anyone, guests included
   - `private` assets by their owner and media managers
-  - `linked` assets by media managers, and by learners only while approved, published content (an exercise, word or lesson) attaches them and they are active
+  - `linked` assets by media managers, and by learners and guests only while approved, published content (an exercise, word or lesson) attaches them and they are active
   - missing and forbidden both return 404, so ids can't be probed
 - Resolution order for listening audio (`audioService`): an attached active recording, then generated TTS by cue hash, then (development only) the browser voice, otherwise unavailable. Publishing requires one of the first two for every listening target (`missingRequiredAudio`). See `CMS.md`, Phase 2.
 - Audio playback (`lib/media/audioSource.js`): production uses only pre-generated or recorded assets, with no TTS call per request. Development falls back to browser `speechSynthesis` (de-DE) when no asset exists yet, and the UI labels it as a development preview. The fallback sends the text to the browser, so it is never enabled in production.
@@ -232,7 +235,7 @@ These are kept apart on purpose:
 | Skill mastery | computed on read (`lib/learning/progress.js`) | **latest** attempt per graded exercise ÷ all available points (unattempted = 0) vs. thresholds resolved level → module → lesson. Skills with no graded content are "not assessed" |
 | Vocabulary review | `userVocabulary` (one doc per user and word) | Leitner boxes 1–5 (10 min, 1, 3, 7, 21 days). Self-rated, so it never feeds mastery |
 | Exam completion | `examAttempts` (one doc per attempt, with a frozen snapshot) | a submitted attempt, graded on the server against the snapshot. Never feeds lesson completion or mastery (`EXAMS.md`) |
-| Level completion | not implemented | no product rule defines it yet |
+| Level completion | computed on read (`lib/learning/journey.js`) | every available lesson of the level completed (`LEARNER.md`, "Metrics") |
 
 - **Ids only from the client:** the client sends ids and raw answers. Every write re-checks the whole visibility chain, and an exercise must belong to the lesson it is submitted under.
 - **Rate limit:** learner writes share a 1200/hour limit per user (`learningByUser`).
@@ -291,6 +294,8 @@ TTS_PROVIDER=google bun run audio:generate -- --voices-verified
 bun run audio:verify                  # manifest/files/content consistency; exits 1 on problems
 ADMIN_EMAIL=… ADMIN_PASSWORD=… bun run create-admin
 bun run content:check                 # pre-publish report for Module 1
+bun run content:check -- --all        # readiness of the whole level (read-only)
+bun run seed -- --update-references   # refresh reference metadata (e.g. Goethe part descriptions) only
 bun run media:cleanup                 # remove stale unsubmitted recordings (safe to schedule)
 bun run dev
 ```

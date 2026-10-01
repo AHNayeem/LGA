@@ -30,6 +30,21 @@ export async function bulkModuleTransitionAction(_prev, formData) {
   return result;
 }
 
+// Admin list selection: one step for the checked items (`ids`, repeated) of one type.
+export async function bulkSelectionAction(_prev, formData) {
+  const { kind, step } = formToObject(formData, ["kind", "step"]);
+  const ids = formData.getAll("ids").filter((v) => typeof v === "string");
+  const result = await runAction("content.bulk_selection", async () => {
+    const actor = await requireUser();
+    return contentService.bulkSelectionTransition(actor, kind, ids, step);
+  });
+  if (result.ok) {
+    revalidatePath("/admin", "layout");
+    revalidatePath("/dashboard");
+  }
+  return result;
+}
+
 export async function setPublishStatusAction(_prev, formData) {
   const { kind, id, to } = formToObject(formData, ["kind", "id", "to"]);
   const result = await runAction("content.publish", async () => {

@@ -17,7 +17,7 @@ export default function PreviewBanner({ status, editorHref }) {
     <section
       aria-label="Draft preview"
       data-testid="preview-banner"
-      className="mb-6 rounded-xl border-2 border-dashed border-warning-700/50 bg-warning-50 p-4 text-sm"
+      className="mb-6 rounded-lg border border-dashed border-warning-700/50 bg-warning-50 px-4 py-3 text-[13px]"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">

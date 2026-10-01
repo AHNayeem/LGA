@@ -18,8 +18,10 @@ export function blockLabel(block) {
   return TYPE_LABEL[block.type] ?? block.type;
 }
 
-// Step list for a lesson: horizontal scroller on phones, vertical list on desktop.
-export default function LessonSteps({ blocks, currentKey, hrefFor, locale }) {
+// Step list for a lesson: horizontal scroller on phones, vertical list on desktop. With
+// `resultHref` the lesson result is the last entry.
+export default function LessonSteps({ blocks, currentKey, hrefFor, locale, resultHref = null, showResult = false }) {
+  const allDone = blocks.length > 0 && blocks.every((b) => b.done);
   return (
     <nav aria-label="Lesson steps">
       {/* `relative` keeps the absolutely positioned sr-only labels inside the scroller. */}
@@ -51,6 +53,25 @@ export default function LessonSteps({ blocks, currentKey, hrefFor, locale }) {
             </li>
           );
         })}
+        {resultHref && (
+          <li className="shrink-0">
+            <Link
+              href={resultHref}
+              aria-current={showResult ? "step" : undefined}
+              className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${
+                showResult ? "border-brand-600 bg-brand-50 font-medium" : "border-line bg-surface hover:bg-canvas"
+              }`}
+            >
+              <span
+                aria-hidden="true"
+                className={`flex size-5 shrink-0 items-center justify-center rounded-full text-xs ${allDone ? "bg-success-700 text-white" : "border border-line text-ink-muted"}`}
+              >
+                ★
+              </span>
+              <span className="whitespace-nowrap">Result</span>
+            </Link>
+          </li>
+        )}
       </ol>
     </nav>
   );

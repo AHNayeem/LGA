@@ -16,7 +16,7 @@ export function useFieldErrors(path) {
 }
 
 const inputClass = (hasError) =>
-  `w-full rounded-md border bg-surface px-2.5 py-1.5 text-sm outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-100 disabled:bg-canvas disabled:text-ink-muted ${
+  `w-full rounded-md border bg-surface px-2.5 py-1.5 text-sm shadow-xs outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-100 disabled:bg-canvas disabled:text-ink-muted ${
     hasError ? "border-danger-700" : "border-line"
   }`;
 
@@ -168,7 +168,7 @@ function LocaleField({ loc, label, value, onChange, messages, multiline, rows })
 
 // Move up / move down / remove for a row in an editable list.
 export function RowControls({ index, count, onMove, onRemove, label }) {
-  const btn = "inline-flex h-7 min-w-7 items-center justify-center rounded border border-line bg-surface px-1.5 text-xs hover:bg-canvas disabled:opacity-40";
+  const btn = "inline-flex size-7 items-center justify-center rounded-md border border-line bg-surface text-xs text-ink-muted shadow-xs transition-colors hover:bg-canvas hover:text-ink disabled:opacity-40";
   return (
     <div className="flex shrink-0 gap-1">
       <button type="button" className={btn} onClick={() => onMove(index, -1)} disabled={index === 0} aria-label={`Move ${label} up`}>
@@ -190,7 +190,7 @@ export function AddButton({ children, onClick, disabled }) {
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="inline-flex h-8 items-center rounded-md border border-dashed border-brand-600/50 px-3 text-xs font-medium text-brand-700 hover:bg-brand-50 disabled:opacity-40"
+      className="inline-flex h-7 items-center gap-1 rounded-md border border-dashed border-brand-600/40 px-2.5 text-xs font-medium text-brand-700 transition-colors hover:bg-brand-50 disabled:opacity-40"
     >
       {children}
     </button>
@@ -199,15 +199,15 @@ export function AddButton({ children, onClick, disabled }) {
 
 export function Panel({ title, description, children, actions }) {
   return (
-    <section className="rounded-xl border border-line bg-surface p-4">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <h2 className="text-sm font-semibold">{title}</h2>
-          {description && <p className="mt-0.5 text-xs text-ink-muted">{description}</p>}
+    <section className="rounded-lg border border-line bg-surface shadow-xs">
+      <div className="flex flex-wrap items-start justify-between gap-2 border-b border-line px-4 py-2.5">
+        <div className="min-w-0">
+          <h2 className="text-[13px] font-semibold">{title}</h2>
+          {description && <p className="mt-0.5 max-w-3xl text-xs text-ink-muted">{description}</p>}
         </div>
         {actions}
       </div>
-      <div className="mt-3 space-y-3">{children}</div>
+      <div className="space-y-3 p-4">{children}</div>
     </section>
   );
 }

@@ -6,6 +6,7 @@ import LocalizedText from "@/components/ui/LocalizedText";
 import AiContentNotice from "@/components/learn/AiContentNotice";
 import ExamPlayer from "@/components/exams/ExamPlayer";
 import ExamResult from "@/components/exams/ExamResult";
+import { goethePracticeLinks as practiceLinks } from "@/lib/services/journeyService";
 
 export const metadata = { title: "Exam" };
 
@@ -17,6 +18,7 @@ export default async function ExamAttemptPage({ params }) {
   const locale = user.uiLanguage ?? "en";
   const data = await orNotFound(getExamAttempt(user, id));
   const examHref = `/exams/${data.exam.levelCode.toLowerCase()}/${data.exam.slug}`;
+  const practice = data.status === "in_progress" ? null : await practiceLinks(data.exam.levelCode);
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-6">
@@ -32,7 +34,7 @@ export default async function ExamAttemptPage({ params }) {
           <ExamPlayer key={data.id} attemptId={data.id} paper={data.paper} deadlineAt={data.deadlineAt} serverNow={data.serverNow} locale={locale} />
         ) : (
           <div className="max-w-3xl space-y-6">
-            <ExamResult view={data.view} locale={locale} />
+            <ExamResult view={data.view} locale={locale} practice={practice} />
             <Link href={examHref} className="inline-flex h-11 items-center rounded-lg border border-line bg-surface px-4 font-medium hover:bg-canvas">
               Back to the exam overview
             </Link>

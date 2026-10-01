@@ -3,9 +3,12 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { completeBlockAction, reviewVocabularyAction } from "@/app/actions/learning";
+import { updateGuestState } from "@/lib/learning/guestStore";
+import { applyBlockDone, applyVocabReview } from "@/lib/learning/state";
 import AudioPlayer from "@/components/audio/AudioPlayer";
 import LocalizedText from "@/components/ui/LocalizedText";
 import Alert from "@/components/ui/Alert";
+import ActionError from "@/components/learn/ActionError";
 import ContentImage from "@/components/learn/ContentImage";
 
 const ARTICLE_TONE = { der: "text-brand-700", die: "text-danger-700", das: "text-success-700" };
@@ -19,11 +22,14 @@ function Word({ card }) {
   );
 }
 
-// Flashcards with self-rating. Ratings update the learner's review schedule on the
-// server (never mastery). In a lesson, the block is completed once every card was rated;
-// the server verifies that before marking it done. In the CMS draft preview ratings stay
-// in the browser: no review schedule or block completion is written.
-export default function Flashcards({ cards, locale = "en", mode = "lesson", lessonId, blockKey, nextHref, preview = false }) {
+// Flashcards with self-rating. Ratings update the learner's review schedule (never
+// mastery): on the server for a signed-in learner (`learner` "user"), in this browser for
+// a guest ("guest"), with the same Leitner rule. In a lesson, the block is completed once
+// every card was rated; the server verifies that for signed-in learners. In the CMS
+// draft preview ("preview") nothing is written anywhere.
+//   mode: "lesson" (a vocabulary step) | "review" (the review deck)
+export default function Flashcards({ cards, locale = "en", mode = "lesson", lessonId, blockKey, nextHref, learner = "user", lessonBlocks = null, onFinished = null }) {
+  const preview = learner === "preview";
   const router = useRouter();
   const [index, setIndex] = useState(0);
   const [revealed, setRevealed] = useState(false);
@@ -36,9 +42,11 @@ export default function Flashcards({ cards, locale = "en", mode = "lesson", less
   function rate(result) {
     setError(null);
     startTransition(async () => {
-      if (!preview) {
+      if (learner === "guest") {
+        updateGuestState((s) => applyVocabReview(s, { vocabId: card.id, result }));
+      } else if (!preview) {
         const res = await reviewVocabularyAction({ vocabId: card.id, result });
-        if (!res.ok) return setError(res.message);
+        if (!res.ok) return setError(res);
       }
       if (index + 1 < cards.length) {
         setIndex(index + 1);
@@ -51,12 +59,22 @@ export default function Flashcards({ cards, locale = "en", mode = "lesson", less
 
   async function finish() {
     if (preview) return router.push(nextHref);
+    if (learner === "guest") {
+      if (mode === "lesson") {
+        updateGuestState((s) => applyBlockDone(s, { lessonId, blockKey, blocks: lessonBlocks }));
+        return router.push(nextHref);
+      }
+      setFinished(true);
+      onFinished?.();
+      return;
+    }
     if (mode === "lesson") {
       const res = await completeBlockAction({ lessonId, blockKey });
-      if (!res.ok) return setError(res.message);
+      if (!res.ok) return setError(res);
       router.push(nextHref);
     } else {
       setFinished(true);
+      onFinished?.();
       router.refresh();
     }
   }
@@ -134,7 +152,7 @@ export default function Flashcards({ cards, locale = "en", mode = "lesson", less
           </button>
         </div>
       )}
-      {error && <Alert tone="error">{error}</Alert>}
+      <ActionError error={error} />
     </div>
   );
 }

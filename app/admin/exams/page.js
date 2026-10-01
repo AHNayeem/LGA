@@ -6,6 +6,7 @@ import { EXAM_REVIEW_POLICY_LABELS } from "@/lib/content/constants";
 import { pickText } from "@/lib/i18n/locales";
 import { ButtonLink, ContentTable, FilterBar, LEVEL_FILTER, PageHeader, Pagination, PUBLISH_FILTER, REVIEW_FILTER, StatusCell } from "@/components/admin/list";
 import LifecycleControls from "@/components/admin/LifecycleControls";
+import BulkActionBar from "@/components/admin/BulkSelection";
 
 export const metadata = { title: "Exams" };
 
@@ -18,7 +19,7 @@ export default async function ExamsPage({ searchParams }) {
         crumbs={[{ href: "/admin", label: "Admin" }]}
         title="Exams"
         description="Exams are ordered sections of exercises from the library, with a time limit, a pass mark and a review policy. Every question must be scored automatically."
-        actions={<ButtonLink href={newHref("exams")}>New exam</ButtonLink>}
+        actions={<ButtonLink icon="plus" href={newHref("exams")}>New exam</ButtonLink>}
       />
       <FilterBar
         action="/admin/exams"
@@ -30,15 +31,17 @@ export default async function ExamsPage({ searchParams }) {
           { name: "publish", label: "Visibility", type: "select", options: PUBLISH_FILTER },
         ]}
       />
+      <BulkActionBar formId="bulk-exams" kind="exams" />
       <ContentTable
         items={list.items}
+        select={{ formId: "bulk-exams", label: (e) => e.slug }}
         empty="No exams match these filters."
         columns={[
           {
             header: "Exam",
             cell: (e) => (
               <>
-                <Link href={editHref("exams", e.id)} className="font-medium text-brand-700 hover:underline" lang="de">
+                <Link href={editHref("exams", e.id)} className="font-medium text-ink hover:text-brand-700 hover:underline" lang="de">
                   {pickText(e.title, "de").text}
                 </Link>
                 <p className="font-mono text-xs text-ink-muted">

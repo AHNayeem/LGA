@@ -107,7 +107,7 @@ export default function ImageAttachment({ value, onChange, path, media, onKnown,
   }
 
   return (
-    <div className="rounded-lg border border-dashed border-line p-3" data-testid="image-attachment">
+    <div className="rounded-lg border border-dashed border-line-strong p-3" data-testid="image-attachment">
       <p className="text-xs font-medium">{label}</p>
       {hint && <p className="text-xs text-ink-muted">{hint}</p>}
 

@@ -17,7 +17,7 @@ function StepForm({ moduleId, examId, step, label }) {
     <form action={formAction} className="flex flex-col gap-1">
       {examId ? <input type="hidden" name="examId" value={examId} /> : <input type="hidden" name="moduleId" value={moduleId} />}
       <input type="hidden" name="step" value={step} />
-      <SubmitButton variant="secondary" pendingLabel="Working…" className="h-9 px-3 text-sm">
+      <SubmitButton variant="secondary" size="md" pendingLabel="Working…">
         {label}
       </SubmitButton>
       {state?.ok && (
@@ -48,7 +48,7 @@ function StepForm({ moduleId, examId, step, label }) {
 // per-item rules; nothing skips a step.
 export default function BulkReviewControls({ moduleId, examId }) {
   return (
-    <div className="flex flex-wrap items-start gap-3">
+    <div className="flex flex-wrap items-start gap-2">
       {STEPS.map((s) => (
         <StepForm key={s.step} moduleId={moduleId} examId={examId} {...s} />
       ))}

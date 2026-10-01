@@ -35,6 +35,19 @@ export async function setMediaStatusAction(id, status) {
   return result;
 }
 
+// Media list selection: archive or restore the checked uploads (`ids`, repeated).
+const MEDIA_STEPS = { archive: "archived", restore: "active" };
+export async function bulkMediaStatusAction(_prev, formData) {
+  const step = formData.get("step");
+  const ids = formData.getAll("ids").filter((v) => typeof v === "string");
+  const result = await runAction("media.bulk_status", async () => {
+    const actor = await requireUser();
+    return mediaService.bulkSetCurriculumMediaStatus(actor, ids, Object.hasOwn(MEDIA_STEPS, step) ? MEDIA_STEPS[step] : String(step));
+  });
+  if (result.ok) revalidateAdmin();
+  return result;
+}
+
 export async function deleteMediaAction(id) {
   const result = await runAction("media.delete", async () => {
     const actor = await requireUser();
